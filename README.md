@@ -2,23 +2,47 @@
 
 Lokal musikquiz til Spotify med flere gamemodes: Classic, Battle Royale, Timeline Showdown, Push Your Luck, Imposter, Wavelength DJ, Don Domingo mode og flere.
 
-## Sådan starter du
+## Start her
 
-1. Installer Node.js, hvis du ikke allerede har det.
-2. Åbn en terminal i denne mappe.
-3. Start serveren:
+Download projektet som ZIP fra GitHub og pak ZIP-filen ud først.
 
-```powershell
-node .\spotify-connect-test\server.js
+### Windows
+
+Dobbeltklik på:
+
+```text
+Start Hitster - Windows.cmd
 ```
 
-4. Åbn siden:
+eller:
+
+```text
+Start Hitster.cmd
+```
+
+Hvis Node.js mangler, åbner startfilen automatisk Node.js-hjemmesiden. Installer Node.js, og dobbeltklik derefter på startfilen igen.
+
+### Mac
+
+Dobbeltklik på:
+
+```text
+Start Hitster - Mac.command
+```
+
+Hvis Node.js mangler, åbner startfilen automatisk Node.js-hjemmesiden. Installer Node.js, og dobbeltklik derefter på startfilen igen.
+
+Hvis Mac siger, at filen ikke må åbnes, så højreklik på filen og vælg `Åbn`.
+
+## Når appen er startet
+
+Siden åbner automatisk i browseren:
 
 ```text
 http://127.0.0.1:5187
 ```
 
-Hvis du bruger skrivebordsgenvejen `Start Hitster.cmd`, kan du bare dobbeltklikke på den.
+Luk ikke terminal-/kommandovinduet mens I spiller. Det er den lokale server.
 
 ## Spotify-opsætning
 
@@ -43,16 +67,16 @@ Du skal ikke bruge Client Secret.
 
 Den nemmeste metode er:
 
-1. Download projektet som ZIP fra GitHub.
-2. Pak ZIP-filen ud.
-3. Start serveren med kommandoen ovenfor eller `Start Hitster.cmd`.
-4. Lav eget Spotify Client ID, eller brug et Client ID fra en Spotify-app hvor brugeren er allowlistet.
+1. Send dem GitHub-linket.
+2. De trykker `Code` og derefter `Download ZIP`.
+3. De pakker ZIP-filen ud.
+4. De dobbeltklikker på den startfil, der passer til deres computer.
 
 Spotify-apps i Development Mode kræver normalt, at hver Spotify-bruger er tilføjet under Users Management i Spotify Developer Dashboard. Ellers kan login eller Spotify-kald give 403.
 
 ## Fejlfinding
 
-- `Der kan ikke oprettes forbindelse til dette website`: serveren kører sandsynligvis ikke. Start den igen.
+- `Der kan ikke oprettes forbindelse til dette website`: serveren kører sandsynligvis ikke. Dobbeltklik på startfilen igen.
 - Spotify `403`: log ind igen, eller sørg for at Spotify-brugeren er allowlistet i Spotify Developer Dashboard.
 - Ingen afspilningsenhed: åbn Spotify på computeren eller telefonen, start en sang kort, og tryk derefter `Hent enheder`.
 - Redirect-fejl: Redirect URI skal være præcis `http://127.0.0.1:5187/callback`.
