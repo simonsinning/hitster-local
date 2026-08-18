@@ -1,0 +1,9 @@
+node_modules/
+.DS_Store
+Thumbs.db
+*.log
+spotify-connect-test/layout-*.png
+spotify-connect-test/.year-audit-cache.json
+spotify-connect-test/.wikidata-year-audit-cache.json
+spotify-connect-test/year-audit-report.json
+spotify-connect-test/wikidata-year-audit-report.json

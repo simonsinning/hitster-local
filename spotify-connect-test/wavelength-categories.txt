@@ -1,0 +1,14 @@
+# Wavelength DJ kategorier
+# En kategori pr. linje.
+# Brug {player} eller {guesser}, hvis appen skal sætte et spillernavn ind.
+
+Hvor passende er sangen til en begravelse?
+Hvor pinlig ville den være at få i sin spotify wrapped?
+Hvor meget lyder den som noget {player} ville sætte på?
+Hvor sandsynligt er det at {player} ville lytte til den i badet?
+Hvor god er sangen til at gå hjem fra byen en varm sommer nat?
+Hvor meget lyder den som noget man hører alene og bagefter sletter fra historikken?
+Hvor meget passer den til at gå ind i et rum som om man ejer stedet?
+Hvor meget passer den til den første dans ved et bryllup
+Hvor meget ville den fungere som intro-musik til {guesser}s realityprogram?
+Hvor passende er den at have som ringetone?

@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="da">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Hitster Spotify-test</title>
+    <style>
+      :root {
+        color-scheme: light;
+        font-family: Arial, Helvetica, sans-serif;
+        background: #f6f4ef;
+        color: #1d1d1f;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+      }
+
+      main {
+        width: min(92vw, 760px);
+        padding: 28px;
+      }
+
+      h1 {
+        margin: 0 0 10px;
+        font-size: 28px;
+        line-height: 1.15;
+      }
+
+      p {
+        margin: 0 0 20px;
+        line-height: 1.45;
+        color: #4b4b4b;
+      }
+
+      .qr-wrap {
+        width: min(72vw, 320px);
+        aspect-ratio: 1;
+        display: grid;
+        place-items: center;
+        margin: 24px auto;
+        background: white;
+        border: 1px solid #dedbd2;
+        border-radius: 8px;
+      }
+
+      img {
+        width: 86%;
+        height: 86%;
+      }
+
+      .actions {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+        gap: 12px;
+      }
+
+      a,
+      button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 44px;
+        padding: 0 16px;
+        border-radius: 8px;
+        background: #1db954;
+        color: white;
+        text-decoration: none;
+        font-weight: 700;
+        border: 0;
+        cursor: pointer;
+        font: inherit;
+        text-align: center;
+      }
+
+      a.secondary,
+      button.secondary {
+        background: #1d1d1f;
+      }
+
+      button.ghost {
+        background: #60584d;
+      }
+
+      .notes {
+        margin-top: 20px;
+        padding: 16px;
+        border: 1px solid #dedbd2;
+        border-radius: 8px;
+        background: white;
+      }
+
+      .notes p {
+        margin-bottom: 10px;
+      }
+
+      .notes p:last-child {
+        margin-bottom: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Spotify afspilningstest</h1>
+      <p>
+        Scan QR-koden med telefonen, eller proev knapperne paa computeren. Test
+        isaer om Spotify kan starte uden at browseren afslorer sangen.
+      </p>
+
+      <div class="qr-wrap">
+        <img src="spotify-test-qr.svg" alt="Spotify QR-kode til test" />
+      </div>
+
+      <div class="actions">
+        <a href="https://open.spotify.com/track/0GjEhVFGZW8afUYGChu3Rr">Samme fane</a>
+        <a
+          href="https://open.spotify.com/track/0GjEhVFGZW8afUYGChu3Rr"
+          target="_blank"
+          rel="noreferrer"
+        >
+          Ny fane
+        </a>
+        <a class="secondary" href="spotify:track:0GjEhVFGZW8afUYGChu3Rr">Spotify-app link</a>
+        <button type="button" class="secondary" id="open-small-window">Lille vindue</button>
+        <button type="button" class="ghost" id="open-backgroundish">Ny fane og fokus tilbage</button>
+        <a class="secondary" href="spotify-test-qr.svg">Vis kun QR</a>
+      </div>
+
+      <div class="notes">
+        <p><strong>Det du leder efter:</strong> en metode hvor musikken starter, mens denne side bliver i fokus.</p>
+        <p>
+          Hvis Spotify-app linket virker bedst, er det sandsynligvis den bedste desktopvej.
+          Hvis ingen af computer-metoderne skjuler sangen, er QR/DJ-telefon nok den mest robuste model.
+        </p>
+      </div>
+    </main>
+
+    <script>
+      const spotifyUrl = "https://open.spotify.com/track/0GjEhVFGZW8afUYGChu3Rr";
+
+      document.getElementById("open-small-window").addEventListener("click", () => {
+        window.open(
+          spotifyUrl,
+          "hitsterSpotifyTest",
+          "popup=yes,width=360,height=240,left=40,top=40"
+        );
+      });
+
+      document.getElementById("open-backgroundish").addEventListener("click", () => {
+        const opened = window.open(spotifyUrl, "_blank", "noopener,noreferrer");
+        window.focus();
+        if (opened) {
+          opened.blur();
+        }
+      });
+    </script>
+  </body>
+</html>

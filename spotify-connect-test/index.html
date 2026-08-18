@@ -1,0 +1,302 @@
+<!doctype html>
+<html lang="da">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Hitster Local</title>
+    <link rel="stylesheet" href="styles.css?v=layout-3" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Musikquiz med Spotify</p>
+          <h1>Hitster Local</h1>
+        </div>
+        <div class="top-actions">
+          <button class="icon-button" id="open-settings" type="button" title="Opsætning">⚙</button>
+          <button class="icon-button" id="reset-game" type="button" title="Nyt spil">↺</button>
+        </div>
+      </header>
+
+      <main>
+        <section class="welcome-panel" id="welcome-panel">
+          <div class="welcome-copy">
+            <p class="eyebrow">Forside</p>
+            <h2>Vælg stemningen. Sæt spillerne. Start musikken.</h2>
+            <p>
+              Spil klassisk Hitster, Battle Royale, Imposter, Wavelength DJ eller en af de andre varianter.
+              Vælg en mode her, eller gå direkte videre og finjuster spillet i opsætningen.
+            </p>
+            <div class="welcome-actions">
+              <button id="open-setup" type="button">Opsæt spil</button>
+              <button id="jump-library" class="ghost" type="button">Se sangbibliotek</button>
+            </div>
+          </div>
+          <div class="welcome-mode-grid" id="welcome-mode-grid"></div>
+        </section>
+
+        <section class="setup-panel" id="setup-panel">
+          <div class="panel-heading">
+            <div>
+              <p class="eyebrow">Trin 1</p>
+              <h2>Opsætning</h2>
+            </div>
+            <p id="auth-status">Ikke logget ind.</p>
+          </div>
+
+          <details class="setup-guide primary-guide">
+            <summary>Guide til Spotify Client ID</summary>
+            <div class="guide-content">
+              <div class="guide-callout">
+                <strong>Hitsters redirect URI</strong>
+                <div class="copy-row">
+                  <code>http://127.0.0.1:5187/callback</code>
+                  <button id="copy-redirect" class="ghost" type="button">Kopier</button>
+                </div>
+              </div>
+
+              <ol class="guide-steps">
+                <li>Gå til <a href="https://developer.spotify.com/dashboard" target="_blank" rel="noopener noreferrer">Spotify Developer Dashboard</a> og log ind med din Spotify-konto.</li>
+                <li>Vælg <strong>Create app</strong>. Kald den fx <strong>Hitster Local</strong>, og vælg <strong>Web API</strong>, hvis Spotify spørger om API.</li>
+                <li>Indsæt redirect URI'en ovenfor under <strong>Redirect URIs</strong>. Brug <code>127.0.0.1</code>, ikke <code>localhost</code>.</li>
+                <li>Gem appen, åbn dens oversigt eller settings, og kopier feltet <strong>Client ID</strong>.</li>
+                <li>Sæt Client ID'et ind her i Hitster, tryk <strong>Gem ID</strong>, og derefter <strong>Log ind</strong>.</li>
+              </ol>
+
+              <p class="guide-note">
+                Du skal ikke bruge Client Secret til denne lokale browser-login. Spotify Premium skal være aktivt på kontoen, der styrer afspilningen.
+              </p>
+            </div>
+          </details>
+
+          <div class="setup-grid">
+            <label>
+              <span>Spotify Client ID</span>
+              <input id="client-id" autocomplete="off" spellcheck="false" placeholder="Indsæt Client ID" />
+            </label>
+
+            <label>
+              <span>Gamemode</span>
+              <select id="game-mode">
+                <option value="classic">Classic</option>
+                <option value="generations">Battle of the Generations</option>
+                <option value="guilty">Guilty Pleasures</option>
+                <option value="movies">Movies & TV Soundtracks</option>
+                <option value="donDomingo">Don Domingo mode</option>
+                <option value="wavelength">Wavelength DJ</option>
+                <option value="battleRoyale">Battle Royale</option>
+                <option value="sharedTimeline">Timeline Showdown</option>
+                <option value="pushLuck">Push Your Luck</option>
+                <option value="imposter">Imposter</option>
+                <option value="puzzleRush">Puzzle Rush</option>
+              </select>
+            </label>
+
+            <label>
+              <span>Afspilningsenhed</span>
+              <select id="device-select"></select>
+            </label>
+
+            <label>
+              <span>Antal spillere</span>
+              <select id="player-count">
+                <option value="1">1 spiller</option>
+                <option value="2">2 spillere</option>
+                <option value="3">3 spillere</option>
+                <option value="4">4 spillere</option>
+                <option value="5">5 spillere</option>
+                <option value="6">6 spillere</option>
+                <option value="7">7 spillere</option>
+                <option value="8">8 spillere</option>
+                <option value="9">9 spillere</option>
+                <option value="10">10 spillere</option>
+                <option value="11">11 spillere</option>
+                <option value="12">12 spillere</option>
+              </select>
+            </label>
+
+            <label class="checkbox-label">
+              <span>Spilregel</span>
+              <input id="hitster-cards-mode" type="checkbox" />
+              <strong>Hitster-kort</strong>
+            </label>
+          </div>
+
+          <div class="player-name-grid" id="player-name-grid"></div>
+
+          <div class="mode-panel" id="mode-panel">
+            <div>
+              <p class="eyebrow" id="mode-eyebrow">Gamemode</p>
+              <h2 id="mode-title">Classic</h2>
+              <p id="mode-description">Den almindelige Hitster-pulje fra biblioteket.</p>
+            </div>
+            <div class="generation-grid" id="generation-grid"></div>
+          </div>
+
+          <div class="setup-action-row">
+            <div class="setup-toggles">
+              <label class="toggle-row advanced-toggle">
+                <input id="advanced-settings-toggle" type="checkbox" />
+                <span>
+                  <strong>Avancerede indstillinger</strong>
+                  <small>Handicap, vinderkrav og sangfiltre</small>
+                </span>
+              </label>
+
+              <label class="toggle-row">
+                <input id="gamemaster-enabled" type="checkbox" />
+                <span>
+                  <strong>Gamemaster med</strong>
+                  <small>Kan åbnes under spillet</small>
+                </span>
+              </label>
+            </div>
+
+            <div class="button-row setup-buttons">
+              <button id="save-client" type="button">Gem ID</button>
+              <button id="login" class="dark" type="button">Log ind</button>
+              <button id="load-devices" class="dark" type="button">Hent enheder</button>
+              <button id="start-game" type="button">Start spil</button>
+            </div>
+          </div>
+
+          <div class="advanced-panel" id="advanced-panel">
+            <div class="panel-heading compact-heading">
+              <div>
+                <h2>Spiller-handicap</h2>
+                <p>Indstillingerne kan være forskellige for hver spiller.</p>
+              </div>
+            </div>
+
+            <div class="advanced-player-grid" id="advanced-player-grid"></div>
+
+            <div class="filter-panel">
+              <div class="panel-heading compact-heading">
+                <div>
+                  <h2>Sangfiltre</h2>
+                  <p>Fravælg genrer og årtier, som ikke skal være med i spillets pulje.</p>
+                </div>
+              </div>
+              <div class="filter-columns">
+                <div>
+                  <strong>Udeluk genrer</strong>
+                  <div class="filter-options" id="genre-exclusions"></div>
+                </div>
+                <div>
+                  <strong>Udeluk årtier</strong>
+                  <div class="filter-options" id="decade-exclusions"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <p class="tiny-note">
+            Redirect URI i Spotify Developer skal være
+            <code>http://127.0.0.1:5187/callback</code>.
+          </p>
+        </section>
+
+        <section class="game-board">
+          <div class="turn-panel">
+            <div class="turn-header">
+              <div>
+                <p class="eyebrow">Aktuel tur</p>
+                <h2 id="current-player">Start spillet</h2>
+                <p id="turn-status">Start spillet, og afspil en skjult sang.</p>
+              </div>
+              <button id="gamemaster-toggle" class="gm-button" type="button" title="Gamemaster" aria-label="Gamemaster" aria-pressed="false">🧙</button>
+            </div>
+
+            <div class="gamemaster-panel" id="gamemaster-panel">
+              <div class="gamemaster-grid" id="gamemaster-grid"></div>
+            </div>
+
+            <div class="song-actions" id="song-actions">
+              <button id="play-track" class="action-button play" type="button" title="Afspil sang" aria-label="Afspil sang">
+                <span class="action-icon icon-play" aria-hidden="true"></span>
+                <span class="action-label">Afspil</span>
+              </button>
+              <button id="resume-track" class="action-button resume" type="button" title="Fortsæt sang" aria-label="Fortsæt sang">
+                <span class="action-icon icon-resume" aria-hidden="true"></span>
+                <span class="action-label">Fortsæt</span>
+              </button>
+              <button id="pause-track" class="action-button pause" type="button" title="Pause" aria-label="Pause">
+                <span class="action-icon icon-pause" aria-hidden="true"></span>
+                <span class="action-label">Pause</span>
+              </button>
+              <button id="reveal-track" class="action-button reveal" type="button" title="Afslør" aria-label="Afslør">
+                <span class="action-icon icon-reveal" aria-hidden="true"></span>
+                <span class="action-label">Afslør</span>
+              </button>
+              <button id="keep-card" class="action-button keep" type="button" title="Korrekt - behold" aria-label="Korrekt - behold">
+                <span class="action-icon icon-keep" aria-hidden="true"></span>
+                <span class="action-label">Behold</span>
+              </button>
+              <button id="discard-card" class="action-button discard" type="button" title="Forkert - kassér" aria-label="Forkert - kassér">
+                <span class="action-icon icon-discard" aria-hidden="true"></span>
+                <span class="action-label">Kassér</span>
+              </button>
+            </div>
+
+            <div class="bonus-actions" id="bonus-actions">
+              <button id="title-correct" class="ghost" type="button">Titel rigtig</button>
+              <button id="artist-correct" class="ghost" type="button">Kunstner rigtig</button>
+            </div>
+
+            <div class="challenge-panel" id="challenge-panel">
+              <div>
+                <p class="eyebrow">Hitster-kort</p>
+                <p id="challenge-status">Efter en placering kan en anden spiller udfordre.</p>
+              </div>
+              <div class="challenge-controls">
+                <select id="challenger-select"></select>
+                <button id="start-challenge" class="dark" type="button">Udfordr</button>
+                <button id="cancel-challenge" class="ghost" type="button">Annuller</button>
+              </div>
+            </div>
+
+            <div class="wavelength-panel" id="wavelength-panel"></div>
+          </div>
+
+          <div class="players-grid" id="players-grid"></div>
+        </section>
+
+        <section class="library-panel" id="library-panel">
+          <div class="panel-heading">
+            <div>
+              <h2>Sangbibliotek</h2>
+              <p><span id="songs-left">0</span> tilbage i spillets pulje</p>
+            </div>
+            <p><span id="library-total">0</span> sange i biblioteket</p>
+          </div>
+          <div class="library-stats" id="library-stats"></div>
+          <details>
+            <summary>Se bibliotek</summary>
+            <div class="library-tools">
+              <input id="library-search" placeholder="Søg fx dansk, rock, 90s, Medina eller 2012" />
+              <select id="library-decade-filter">
+                <option value="">Alle årtier</option>
+              </select>
+              <select id="library-country-filter">
+                <option value="">Alle lande</option>
+              </select>
+              <select id="library-genre-filter">
+                <option value="">Alle genrer</option>
+              </select>
+            </div>
+            <p class="library-result-note" id="library-result-note"></p>
+            <div class="library-list" id="library-list"></div>
+          </details>
+        </section>
+      </main>
+    </div>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+    <script src="song-library.js"></script>
+    <script src="don-domingo-library.js"></script>
+    <script src="imposter-library.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>
