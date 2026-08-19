@@ -24,15 +24,38 @@ Hvis Node.js mangler, åbner startfilen automatisk Node.js-hjemmesiden. Installe
 
 ### Mac
 
-Dobbeltklik på:
+Første gang kan Mac blokere filen, fordi den er downloadet fra GitHub og ikke Apple-signeret.
+
+Gør sådan:
+
+1. Højreklik eller Ctrl-klik på:
 
 ```text
 Start Hitster - Mac.command
 ```
 
-Hvis Node.js mangler, åbner startfilen automatisk Node.js-hjemmesiden. Installer Node.js, og dobbeltklik derefter på startfilen igen.
+2. Vælg `Åbn`.
+3. Tryk `Åbn` igen i advarslen.
 
-Hvis Mac siger, at filen ikke må åbnes, så højreklik på filen og vælg `Åbn`.
+Efter første gang kan den normalt åbnes med dobbeltklik.
+
+Hvis Mac ikke viser `Åbn`-knappen:
+
+1. Tryk `OK` i advarslen.
+2. Åbn `Systemindstillinger`.
+3. Gå til `Anonymitet & sikkerhed`.
+4. Find beskeden om `Start Hitster - Mac.command`.
+5. Tryk `Åbn alligevel`.
+
+Sidste udvej, hvis Mac stadig blokerer: åbn Terminal, træk hele Hitster-mappen ind i Terminal-vinduet efter denne kommando, og tryk Enter:
+
+```bash
+xattr -dr com.apple.quarantine 
+```
+
+Hvis Node.js mangler, åbner startfilen automatisk Node.js-hjemmesiden. Installer Node.js, og åbn derefter startfilen igen.
+
+Der ligger også en fil der hedder `MAC - Første gang.txt` med samme guide.
 
 ## Når appen er startet
 
@@ -80,3 +103,4 @@ Spotify-apps i Development Mode kræver normalt, at hver Spotify-bruger er tilf�
 - Spotify `403`: log ind igen, eller sørg for at Spotify-brugeren er allowlistet i Spotify Developer Dashboard.
 - Ingen afspilningsenhed: åbn Spotify på computeren eller telefonen, start en sang kort, og tryk derefter `Hent enheder`.
 - Redirect-fejl: Redirect URI skal være præcis `http://127.0.0.1:5187/callback`.
+- Mac advarer om malware/ukendt udvikler: det er Apples sikkerhedssystem, fordi startfilen ikke er Apple-signeret. Højreklik på `Start Hitster - Mac.command`, vælg `Åbn`, og godkend den første gang.

@@ -1,0 +1,40 @@
+MAC - FOERSTE GANG
+
+Hvis Mac siger, at "Start Hitster - Mac.command" ikke kan aabnes,
+fordi Apple ikke kan kontrollere om den indeholder malware, saa er det
+macOS Gatekeeper.
+
+Det betyder ikke, at Hitster er malware.
+Det betyder bare, at filen er downloadet fra GitHub og ikke er Apple-signeret.
+
+GOER SAADAN:
+
+1. Højreklik eller Ctrl-klik på "Start Hitster - Mac.command"
+2. Vælg "Åbn"
+3. Tryk "Åbn" igen i advarslen
+
+Efter første gang kan filen normalt åbnes med dobbeltklik.
+
+HVIS DER IKKE ER EN "ÅBN"-KNAP:
+
+1. Tryk "OK" i advarslen
+2. Åbn "Systemindstillinger"
+3. Gå til "Anonymitet & sikkerhed"
+4. Find beskeden om "Start Hitster - Mac.command"
+5. Tryk "Åbn alligevel"
+
+SIDSTE UDVEJ:
+
+Hvis Mac stadig blokerer, kan man fjerne download-advarslen fra hele mappen.
+
+1. Åbn Terminal
+2. Skriv dette, men tryk ikke Enter endnu:
+
+xattr -dr com.apple.quarantine 
+
+3. Træk hele Hitster-mappen ind i Terminal-vinduet
+4. Tryk Enter
+5. Prøv at åbne "Start Hitster - Mac.command" igen
+
+Hvis Node.js mangler, åbner startfilen automatisk Node.js-hjemmesiden.
+Installer Node.js og prøv derefter igen.
