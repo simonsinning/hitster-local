@@ -450,8 +450,13 @@ h2 {
   opacity: 0.48;
 }
 
+.setup-grid label.disabled {
+  opacity: 0.52;
+}
+
 .checkbox-label.disabled,
-.checkbox-label.disabled input {
+.checkbox-label.disabled input,
+.setup-grid label.disabled select {
   cursor: not-allowed;
 }
 
@@ -474,6 +479,20 @@ h2 {
 
 .mode-panel.active {
   display: grid;
+}
+
+.mode-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.mode-summary-grid > div {
+  min-width: 0;
+}
+
+.mode-summary-grid > div.disabled {
+  opacity: 0.62;
 }
 
 .mode-panel h2 {
@@ -1680,6 +1699,7 @@ details textarea {
   }
 
   .setup-grid,
+  .mode-summary-grid,
   .advanced-player-row,
   .gamemaster-row,
   .filter-columns,

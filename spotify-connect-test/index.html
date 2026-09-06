@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Hitster Local</title>
-    <link rel="stylesheet" href="styles.css?v=layout-3" />
+    <link rel="stylesheet" href="styles.css?v=pools-1" />
   </head>
   <body>
     <div class="app-shell">
@@ -81,15 +81,23 @@
               <select id="game-mode">
                 <option value="classic">Classic</option>
                 <option value="generations">Battle of the Generations</option>
-                <option value="guilty">Guilty Pleasures</option>
-                <option value="movies">Movies & TV Soundtracks</option>
-                <option value="donDomingo">Don Domingo mode</option>
                 <option value="wavelength">Wavelength DJ</option>
                 <option value="battleRoyale">Battle Royale</option>
                 <option value="sharedTimeline">Timeline Showdown</option>
                 <option value="pushLuck">Push Your Luck</option>
                 <option value="imposter">Imposter</option>
                 <option value="puzzleRush">Puzzle Rush</option>
+              </select>
+            </label>
+
+            <label id="song-pool-field">
+              <span>Sangpulje</span>
+              <select id="song-pool">
+                <option value="main">Hitster-biblioteket</option>
+                <option value="guilty">Guilty Pleasures</option>
+                <option value="movies">Movies & TV Soundtracks</option>
+                <option value="donDomingo">Don Domingo mode</option>
+                <option value="imposterHits">Imposter-hits</option>
               </select>
             </label>
 
@@ -126,10 +134,17 @@
           <div class="player-name-grid" id="player-name-grid"></div>
 
           <div class="mode-panel" id="mode-panel">
-            <div>
+            <div class="mode-summary-grid">
+              <div>
               <p class="eyebrow" id="mode-eyebrow">Gamemode</p>
               <h2 id="mode-title">Classic</h2>
               <p id="mode-description">Den almindelige Hitster-pulje fra biblioteket.</p>
+              </div>
+              <div id="pool-summary">
+                <p class="eyebrow">Sangpulje</p>
+                <h2 id="pool-title">Hitster-biblioteket</h2>
+                <p id="pool-description">Den faste lokale sangpulje.</p>
+              </div>
             </div>
             <div class="generation-grid" id="generation-grid"></div>
           </div>

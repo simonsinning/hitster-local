@@ -19,23 +19,60 @@ const gameModes = {
   classic: {
     title: "Classic",
     description: "Den klassiske tidslinje: afspil en skjult sang, placer den i den rigtige rækkefølge, og vind ved at bygge den bedste timeline.",
-    source: "local",
   },
   generations: {
     title: "Battle of the Generations",
     description: "Hver spiller vælger en musikæra. Du får primært sange fra din egen generation og prøver at slå de andre på hjemmebane.",
-    source: "local",
     battle: true,
+  },
+  wavelength: {
+    title: "Wavelength DJ",
+    description: "Alle undtagen gætteren ser et hemmeligt tal og finder selv en sang i Spotify, der passer til kategorien og tallet.",
+    noSongPool: true,
+  },
+  battleRoyale: {
+    title: "Battle Royale",
+    description: "Alle starter med tre liv. Hver forkert placering koster et liv, og sidste spiller tilbage vinder.",
+    battleRoyale: true,
+  },
+  sharedTimeline: {
+    title: "Timeline Showdown",
+    description: "Alle får samme sang og placerer den i hver deres tidslinje. Først til pointmålet vinder, med sudden death hvis flere når det samtidig.",
+    sharedTimeline: true,
+  },
+  pushLuck: {
+    title: "Push Your Luck",
+    description: "Stop efter en korrekt sang, eller fortsæt for at presse turen. En fejl kan koste hele turens gevinst.",
+    pushLuck: true,
+  },
+  imposter: {
+    title: "Imposter",
+    description: "Crewmates får den hemmelige sang at vide og hører den. Impostere ser kun deres rolle og skal bluffe sig gennem samtalen.",
+    imposter: true,
+    recommendedSongPool: "imposterHits",
+  },
+  puzzleRush: {
+    title: "Puzzle Rush",
+    description: "Placér så mange sange korrekt som muligt i ét run. Første fejl stopper forsøget, og mode kan spilles alene som træning.",
+    puzzleRush: true,
+  },
+};
+
+const songPools = {
+  main: {
+    title: "Hitster-biblioteket",
+    description: "Den faste lokale hovedpulje med danske og internationale sange.",
+    source: "local",
   },
   guilty: {
     title: "Guilty Pleasures",
-    description: "Fuld af sange man enten elsker, hader eller nægter at indrømme man kan teksten til. Spilles med klassisk tidslinje.",
+    description: "Sange man enten elsker, hader eller nægter at indrømme man kan teksten til. Hentes fra faste Bopster-puljer.",
     source: "bopster",
     playlistIds: ["107", "108", "109", "110"],
   },
   movies: {
     title: "Movies & TV Soundtracks",
-    description: "Soundtracks fra film og serier. I stedet for kunstner-bonus kan I give bonus for at gætte filmen eller serien.",
+    description: "Film- og TV-soundtracks. Når Hitster-kort er slået til, gives bonus for korrekt film eller serie.",
     source: "bopster",
     playlistId: "1951",
     minSongs: 300,
@@ -43,49 +80,26 @@ const gameModes = {
   },
   donDomingo: {
     title: "Don Domingo mode",
-    description: "Antons egen musiksmag som fast lokal pulje. En personlig variant med klassiske regler og lidt mere Don Domingo-energi.",
+    description: "Antons musiksmag som fast lokal sangpulje.",
     source: "static",
     libraryName: "DON_DOMINGO_SONG_LIBRARY",
     playlistId: "5yNyrf6T5Op8tzcoKLaszH",
     minSongs: 1,
   },
-  wavelength: {
-    title: "Wavelength DJ",
-    description: "Alle undtagen gætteren ser et hemmeligt tal og finder selv en sang i Spotify, der passer til kategorien og tallet.",
-    source: "wavelength",
-  },
-  battleRoyale: {
-    title: "Battle Royale",
-    description: "Alle starter med tre liv. Hver forkert placering koster et liv, og sidste spiller tilbage vinder.",
-    source: "local",
-    battleRoyale: true,
-  },
-  sharedTimeline: {
-    title: "Timeline Showdown",
-    description: "Alle får samme sang og placerer den i hver deres tidslinje. Først til pointmålet vinder, med sudden death hvis flere når det samtidig.",
-    source: "local",
-    sharedTimeline: true,
-  },
-  pushLuck: {
-    title: "Push Your Luck",
-    description: "Stop efter en korrekt sang, eller fortsæt for at presse turen. En fejl kan koste hele turens gevinst.",
-    source: "local",
-    pushLuck: true,
-  },
-  imposter: {
-    title: "Imposter",
-    description: "Crewmates får den hemmelige sang at vide og hører den. Impostere ser kun deres rolle og skal bluffe sig gennem samtalen.",
+  imposterHits: {
+    title: "Imposter-hits",
+    description: "En håndplukket pulje med meget kendte sange, lavet til Imposter, men kan også bruges i andre modes.",
     source: "static",
     libraryName: "IMPOSTER_SONG_LIBRARY",
     minSongs: 50,
-    imposter: true,
+    recommendedFor: ["imposter"],
   },
-  puzzleRush: {
-    title: "Puzzle Rush",
-    description: "Placér så mange sange korrekt som muligt i ét run. Første fejl stopper forsøget, og mode kan spilles alene som træning.",
-    source: "local",
-    puzzleRush: true,
-  },
+};
+
+const legacyModeToSongPool = {
+  guilty: "guilty",
+  movies: "movies",
+  donDomingo: "donDomingo",
 };
 
 const fallbackWavelengthCategories = [
@@ -239,6 +253,8 @@ const el = {
   authStatus: document.getElementById("auth-status"),
   clientId: document.getElementById("client-id"),
   gameMode: document.getElementById("game-mode"),
+  songPool: document.getElementById("song-pool"),
+  songPoolField: document.getElementById("song-pool-field"),
   deviceSelect: document.getElementById("device-select"),
   playerCount: document.getElementById("player-count"),
   hitsterCardsMode: document.getElementById("hitster-cards-mode"),
@@ -247,6 +263,9 @@ const el = {
   modeEyebrow: document.getElementById("mode-eyebrow"),
   modeTitle: document.getElementById("mode-title"),
   modeDescription: document.getElementById("mode-description"),
+  poolSummary: document.getElementById("pool-summary"),
+  poolTitle: document.getElementById("pool-title"),
+  poolDescription: document.getElementById("pool-description"),
   generationGrid: document.getElementById("generation-grid"),
   advancedSettingsToggle: document.getElementById("advanced-settings-toggle"),
   advancedPanel: document.getElementById("advanced-panel"),
@@ -308,6 +327,7 @@ const state = {
   challenges: [],
   activeChallengeIndex: null,
   gameMode: "classic",
+  songPool: "main",
   hitsterCardsEnabled: false,
   gamemasterEnabled: false,
   gamemasterOpen: false,
@@ -342,6 +362,7 @@ const state = {
 function savePersistent() {
   localStorage.setItem("hitster_client_id", el.clientId.value.trim());
   localStorage.setItem("hitster_game_mode", el.gameMode.value);
+  localStorage.setItem("hitster_song_pool", shouldUseSongPool(el.gameMode.value) ? el.songPool.value : state.songPool);
   localStorage.setItem("hitster_player_count", el.playerCount.value);
   localStorage.setItem("hitster_cards_mode", canUseHitsterCards(el.gameMode.value) && el.hitsterCardsMode.checked ? "1" : "0");
   localStorage.setItem("hitster_gamemaster_enabled", el.gamemasterEnabled.checked ? "1" : "0");
@@ -360,12 +381,17 @@ function savePersistent() {
 
 function loadPersistent() {
   el.clientId.value = localStorage.getItem("hitster_client_id") || localStorage.getItem("spotify_client_id") || "";
-  el.gameMode.value = gameModes[localStorage.getItem("hitster_game_mode")] ? localStorage.getItem("hitster_game_mode") : "classic";
+  const savedMode = localStorage.getItem("hitster_game_mode");
+  const migratedPool = getLegacySongPoolForMode(savedMode);
+  el.gameMode.value = normalizeGameMode(savedMode);
   state.gameMode = el.gameMode.value;
+  el.songPool.value = normalizeSongPool(migratedPool || localStorage.getItem("hitster_song_pool") || getRecommendedSongPoolForMode(state.gameMode));
+  state.songPool = el.songPool.value;
   const savedNames = safeJsonParse(localStorage.getItem("hitster_player_names"), []);
   const savedCount = clampPlayerCount(Number(localStorage.getItem("hitster_player_count")) || Math.max(2, savedNames.length));
   el.playerCount.value = String(savedCount);
   el.hitsterCardsMode.checked = localStorage.getItem("hitster_cards_mode") === "1";
+  syncSongPoolAvailability();
   syncHitsterCardsAvailability();
   el.gamemasterEnabled.checked = localStorage.getItem("hitster_gamemaster_enabled") === "1";
   el.advancedSettingsToggle.checked = localStorage.getItem("hitster_advanced_enabled") === "1";
@@ -384,7 +410,7 @@ function loadPersistent() {
   renderModePanel();
   syncPlayersFromFields();
 
-  state.deck = shuffle(getPlayableSongLibrary());
+  state.deck = [];
 }
 
 function safeJsonParse(value, fallback) {
@@ -413,6 +439,7 @@ function saveGameSnapshot() {
     challenges: state.challenges,
     activeChallengeIndex: state.activeChallengeIndex,
     gameMode: state.gameMode,
+    songPool: state.songPool,
     hitsterCardsEnabled: state.hitsterCardsEnabled,
     gamemasterEnabled: state.gamemasterEnabled,
     gamemasterOpen: state.gamemasterOpen,
@@ -488,7 +515,8 @@ function restoreSavedGame() {
     : [];
   state.activeChallengeIndex = Number.isInteger(snapshot.activeChallengeIndex) ? snapshot.activeChallengeIndex : null;
   if (!state.challenges[state.activeChallengeIndex]) state.activeChallengeIndex = null;
-  state.gameMode = gameModes[snapshot.gameMode] ? snapshot.gameMode : "classic";
+  state.gameMode = normalizeGameMode(snapshot.gameMode);
+  state.songPool = normalizeSongPool(snapshot.songPool || getLegacySongPoolForMode(snapshot.gameMode) || getRecommendedSongPoolForMode(state.gameMode));
   state.hitsterCardsEnabled = canUseHitsterCards(state.gameMode) && Boolean(snapshot.hitsterCardsEnabled);
   if (!state.hitsterCardsEnabled) {
     state.challenges = [];
@@ -526,7 +554,9 @@ function restoreSavedGame() {
 
   el.playerCount.value = String(players.length);
   el.gameMode.value = state.gameMode;
+  el.songPool.value = state.songPool;
   el.hitsterCardsMode.checked = state.hitsterCardsEnabled;
+  syncSongPoolAvailability();
   syncHitsterCardsAvailability();
   el.gamemasterEnabled.checked = state.gamemasterEnabled;
   renderFilterOptions();
@@ -657,6 +687,45 @@ function normalizePlayerSettings(settings = {}) {
     scoreOffset: clampScoreOffset(settings.scoreOffset),
     generationEra: normalizeGenerationEra(settings.generationEra),
   };
+}
+
+function normalizeGameMode(value) {
+  if (gameModes[value]) return value;
+  if (legacyModeToSongPool[value]) return "classic";
+  return "classic";
+}
+
+function normalizeSongPool(value) {
+  return songPools[value] ? value : "main";
+}
+
+function getLegacySongPoolForMode(value) {
+  return legacyModeToSongPool[value] || "";
+}
+
+function shouldUseSongPool(value = el.gameMode?.value || state.gameMode) {
+  return !gameModes[normalizeGameMode(value)]?.noSongPool;
+}
+
+function getRecommendedSongPoolForMode(value = el.gameMode?.value || state.gameMode) {
+  return gameModes[normalizeGameMode(value)]?.recommendedSongPool || "main";
+}
+
+function syncSongPoolAvailability() {
+  if (!el.songPool || !el.songPoolField) return;
+  const usesPool = shouldUseSongPool(el.gameMode.value);
+  el.songPool.disabled = !usesPool;
+  el.songPoolField.classList.toggle("disabled", !usesPool);
+}
+
+function maybeApplyRecommendedSongPool(previousMode = "") {
+  if (!el.songPool || !shouldUseSongPool(el.gameMode.value)) return;
+  const recommended = getRecommendedSongPoolForMode(el.gameMode.value);
+  const previousRecommended = previousMode ? getRecommendedSongPoolForMode(previousMode) : "";
+  const current = normalizeSongPool(el.songPool.value);
+  if (current === "main" || current === previousRecommended) {
+    el.songPool.value = recommended;
+  }
 }
 
 function normalizeGenerationEra(value) {
@@ -832,12 +901,22 @@ function renderAdvancedPlayerSettings(settings = getSetupPlayerSettings()) {
 
 function renderModePanel(settings = getSetupPlayerSettings()) {
   const mode = getSelectedGameMode();
+  const pool = getSelectedSongPool();
+  const usesPool = shouldUseSongPool(el.gameMode.value);
+  syncSongPoolAvailability();
   el.modePanel.classList.toggle("active", Boolean(mode));
   el.modeEyebrow.textContent = mode.battle ? "Battle-mode" : "Gamemode";
   el.modeTitle.textContent = mode.title;
   el.modeDescription.textContent = mode.description;
+  if (el.poolSummary) el.poolSummary.classList.toggle("disabled", !usesPool);
+  if (el.poolTitle) el.poolTitle.textContent = usesPool ? pool.title : "Ingen sangpulje";
+  if (el.poolDescription) {
+    el.poolDescription.textContent = usesPool
+      ? pool.description
+      : "Dette gamemode bruger spillernes egne Spotify-valg i stedet for biblioteket.";
+  }
 
-  if (mode.source === "wavelength") {
+  if (mode.noSongPool) {
     const useCategories = getWavelengthUseCategoriesSetting();
     const winScore = getWavelengthWinScoreSetting();
     el.generationGrid.innerHTML = `
@@ -974,11 +1053,19 @@ function renderModePanel(settings = getSetupPlayerSettings()) {
 }
 
 function getSelectedGameMode() {
-  return gameModes[el.gameMode.value] || gameModes.classic;
+  return gameModes[normalizeGameMode(el.gameMode.value)] || gameModes.classic;
+}
+
+function getSelectedSongPool() {
+  return songPools[normalizeSongPool(el.songPool?.value || state.songPool)] || songPools.main;
 }
 
 function getGameModeTitle(value = state.gameMode) {
-  return (gameModes[value] || gameModes.classic).title;
+  return (gameModes[normalizeGameMode(value)] || gameModes.classic).title;
+}
+
+function getSongPoolTitle(value = state.songPool) {
+  return (songPools[normalizeSongPool(value)] || songPools.main).title;
 }
 
 function isBattleMode() {
@@ -986,7 +1073,7 @@ function isBattleMode() {
 }
 
 function isSoundtrackMode() {
-  return Boolean(gameModes[state.gameMode]?.soundtrackBonus);
+  return Boolean(songPools[state.songPool]?.soundtrackBonus);
 }
 
 function isWavelengthMode(value = state.gameMode) {
@@ -1414,7 +1501,7 @@ function getGenerationEraLabel(value) {
 
 function renderFilterOptions() {
   if (!el.genreExclusions || !el.decadeExclusions) return;
-  const songs = loadSongLibrary();
+  const songs = getSongPoolPreviewSongs() || loadSongLibrary();
   const selectedGenres = new Set(state.excludedGenres);
   const selectedDecades = new Set(state.excludedDecades);
   const genres = [...new Set(songs.map((song) => song.genre).filter(Boolean))].sort((a, b) => a.localeCompare(b));
@@ -1624,13 +1711,13 @@ async function spotifyFetch(path, options = {}) {
   });
 
   if (response.status === 403) {
-    throw new Error("Spotify gav 403. Log ind igen, eller brug en gamemode der ikke kraever Spotify playlist-adgang.");
+    throw new Error("Spotify gav 403. Log ind igen, eller brug en sangpulje der ikke kræver Spotify playlist-adgang.");
   }
 
   if (!response.ok && response.status !== 204) {
     const message = await response.text();
     if (response.status === 403) {
-      throw new Error("Spotify gav 403. Log ind igen, eller brug en gamemode der ikke kraever Spotify playlist-adgang.");
+      throw new Error("Spotify gav 403. Log ind igen, eller brug en sangpulje der ikke kræver Spotify playlist-adgang.");
     }
     throw new Error(`${response.status}: ${message}`);
   }
@@ -1913,7 +2000,8 @@ async function startGame() {
   const names = getPlayerNames();
   const advancedEnabled = el.advancedSettingsToggle.checked;
   const settings = getEffectivePlayerSettings(advancedEnabled);
-  state.gameMode = el.gameMode.value;
+  state.gameMode = normalizeGameMode(el.gameMode.value);
+  state.songPool = normalizeSongPool(el.songPool.value);
   state.hitsterCardsEnabled = canUseHitsterCards(state.gameMode) && el.hitsterCardsMode.checked;
   state.gamemasterEnabled = el.gamemasterEnabled.checked;
   state.gamemasterOpen = false;
@@ -1960,7 +2048,7 @@ async function startGame() {
 
   state.wavelength = null;
   el.startGame.disabled = true;
-  toast(`Henter ${getGameModeTitle(state.gameMode)}-pulje...`);
+  toast(`Henter ${getSongPoolTitle(state.songPool)} til ${getGameModeTitle(state.gameMode)}...`);
 
   try {
     state.deck = await buildGameDeck();
@@ -1991,7 +2079,7 @@ async function startGame() {
   const minimumSongs = isSharedTimelineMode(state.gameMode) ? 2 : state.players.length + 1;
   if (state.deck.length < minimumSongs) {
     state.started = false;
-    toast(`${getGameModeTitle()} efterlader for få sange til at starte spillet.`);
+    toast(`${getSongPoolTitle()} efterlader for få sange til ${getGameModeTitle()}.`);
     return;
   }
 
@@ -2021,7 +2109,7 @@ async function startGame() {
 
   state.setupOpen = false;
   render();
-  toast(`${getGameModeTitle()} er startet.`);
+  toast(`${getGameModeTitle()} er startet med ${getSongPoolTitle()}.`);
 }
 
 function resetGame() {
@@ -2030,7 +2118,8 @@ function resetGame() {
   state.pendingIndex = null;
   state.challenges = [];
   state.activeChallengeIndex = null;
-  state.gameMode = el.gameMode.value;
+  state.gameMode = normalizeGameMode(el.gameMode.value);
+  state.songPool = normalizeSongPool(el.songPool.value);
   syncHitsterCardsAvailability();
   state.hitsterCardsEnabled = canUseHitsterCards(state.gameMode) && el.hitsterCardsMode.checked;
   state.gamemasterEnabled = el.gamemasterEnabled.checked;
@@ -2060,7 +2149,7 @@ function resetGame() {
   state.revealed = false;
   state.wavelength = null;
   syncPlayersFromFields();
-  state.deck = shuffle(getPlayableSongLibrary());
+  state.deck = [];
   clearGameSnapshot();
   el.gamemasterToggle.classList.remove("active");
   el.gamemasterToggle.setAttribute("aria-pressed", "false");
@@ -3698,16 +3787,17 @@ function loadSongLibrary() {
 
 async function buildGameDeck() {
   const mode = getSelectedGameMode();
+  const pool = getSelectedSongPool();
   let songs = [];
 
-  if (mode.source === "spotify") {
-    songs = await loadSpotifyPlaylistSongs(mode.playlistId, mode.title, mode.minSongs);
-  } else if (mode.source === "spotifyPage") {
-    songs = await loadSpotifyPagePlaylistSongs(mode.playlistId, mode.title, mode.minSongs);
-  } else if (mode.source === "bopster") {
-    songs = await loadBopsterPlaylistSongs(mode.playlistIds || mode.playlistId, mode.title, mode.minSongs);
-  } else if (mode.source === "static") {
-    songs = loadStaticGameModeSongs(mode.libraryName, mode.title, mode.minSongs);
+  if (pool.source === "spotify") {
+    songs = await loadSpotifyPlaylistSongs(pool.playlistId, pool.title, pool.minSongs);
+  } else if (pool.source === "spotifyPage") {
+    songs = await loadSpotifyPagePlaylistSongs(pool.playlistId, pool.title, pool.minSongs);
+  } else if (pool.source === "bopster") {
+    songs = await loadBopsterPlaylistSongs(pool.playlistIds || pool.playlistId, pool.title, pool.minSongs);
+  } else if (pool.source === "static") {
+    songs = loadStaticSongPoolSongs(pool.libraryName, pool.title, pool.minSongs);
   } else {
     songs = loadSongLibrary();
   }
@@ -3718,10 +3808,10 @@ async function buildGameDeck() {
 }
 
 function getPlayableSongLibrary() {
-  return applySongFilters(loadSongLibrary());
+  return applySongFilters(getSongPoolPreviewSongs() || []);
 }
 
-function loadStaticGameModeSongs(libraryName, title, minSongs = 1) {
+function loadStaticSongPoolSongs(libraryName, title, minSongs = 1) {
   const library = window[libraryName];
   const songs = Array.isArray(library)
     ? library.map((song) => normalizeSong({ ...song, source: title })).filter(Boolean)
@@ -3780,7 +3870,7 @@ function spotifyTrackToSong(track, source) {
     artist: track.artists.map((artist) => artist.name).join(", "),
     year,
     uri: track.uri || "",
-    genre: source === gameModes.guilty.title ? "guilty-pleasure" : "playlist",
+    genre: source === songPools.guilty.title ? "guilty-pleasure" : "playlist",
     source,
   });
 }
@@ -3796,7 +3886,7 @@ async function loadBopsterPlaylistSongs(playlistIds, title, minSongs = 1) {
     Array.isArray(data.songs)
       ? data.songs.map((song) => normalizeSong({
           ...song,
-          genre: title === gameModes.guilty.title ? "guilty-pleasure" : song.genre,
+          genre: title === songPools.guilty.title ? "guilty-pleasure" : song.genre,
           source: title,
         })).filter(Boolean)
       : []
@@ -3868,11 +3958,39 @@ function normalizeIdentityText(value) {
 }
 
 function renderLibrary() {
-  const songs = loadSongLibrary();
+  const songs = getSongPoolPreviewSongs();
+  const pool = getSelectedSongPool();
+  if (!shouldUseSongPool()) {
+    el.libraryTotal.textContent = "0";
+    el.libraryStats.innerHTML = createStatBlock("Wavelength DJ", [["Sangpulje", "bruges ikke"]]);
+    if (el.libraryResultNote) el.libraryResultNote.textContent = "Wavelength DJ bruger spillernes egne Spotify-sange undervejs.";
+    el.libraryList.innerHTML = "";
+    return;
+  }
+  if (!songs) {
+    el.libraryTotal.textContent = "Ekstern";
+    el.libraryStats.innerHTML = createStatBlock(pool.title, [["Status", "hentes når spillet starter"]]);
+    if (el.libraryResultNote) el.libraryResultNote.textContent = `${pool.title} hentes fra nettet, når du starter spillet.`;
+    el.libraryList.innerHTML = "";
+    return;
+  }
   el.libraryTotal.textContent = String(songs.length);
   renderLibraryStats(songs);
   renderLibraryFilterOptions(songs);
   renderLibraryRows(songs);
+}
+
+function getSongPoolPreviewSongs() {
+  const pool = getSelectedSongPool();
+  if (pool.source === "local") return loadSongLibrary();
+  if (pool.source === "static") {
+    try {
+      return loadStaticSongPoolSongs(pool.libraryName, pool.title, pool.minSongs);
+    } catch {
+      return [];
+    }
+  }
+  return null;
 }
 
 function renderLibraryStats(songs) {
@@ -4039,8 +4157,12 @@ el.welcomeModeGrid?.addEventListener("click", (event) => {
   if (!(card instanceof HTMLElement)) return;
   const mode = card.dataset.welcomeMode;
   if (!gameModes[mode]) return;
+  const previousMode = el.gameMode.value;
   el.gameMode.value = mode;
   state.gameMode = mode;
+  maybeApplyRecommendedSongPool(previousMode);
+  state.songPool = normalizeSongPool(el.songPool.value);
+  syncSongPoolAvailability();
   syncHitsterCardsAvailability();
   renderPlayerNameFields(Number(el.playerCount.value));
   renderModePanel();
@@ -4053,11 +4175,22 @@ el.openSettings.addEventListener("click", () => {
   render();
 });
 el.gameMode.addEventListener("change", () => {
-  state.gameMode = el.gameMode.value;
+  const previousMode = state.gameMode;
+  state.gameMode = normalizeGameMode(el.gameMode.value);
+  maybeApplyRecommendedSongPool(previousMode);
+  state.songPool = normalizeSongPool(el.songPool.value);
+  syncSongPoolAvailability();
   syncHitsterCardsAvailability();
   renderPlayerNameFields(Number(el.playerCount.value));
   renderModePanel();
   syncPlayersFromFields();
+  savePersistent();
+  render();
+});
+el.songPool.addEventListener("change", () => {
+  state.songPool = normalizeSongPool(el.songPool.value);
+  renderFilterOptions();
+  renderModePanel();
   savePersistent();
   render();
 });
@@ -4221,10 +4354,10 @@ el.artistCorrect.addEventListener("click", () => {
 });
 el.startChallenge.addEventListener("click", startChallenge);
 el.cancelChallenge.addEventListener("click", cancelChallenge);
-el.librarySearch.addEventListener("input", () => renderLibraryRows(loadSongLibrary()));
-el.libraryDecadeFilter.addEventListener("change", () => renderLibraryRows(loadSongLibrary()));
-el.libraryCountryFilter?.addEventListener("change", () => renderLibraryRows(loadSongLibrary()));
-el.libraryGenreFilter?.addEventListener("change", () => renderLibraryRows(loadSongLibrary()));
+el.librarySearch.addEventListener("input", () => renderLibraryRows(getSongPoolPreviewSongs() || []));
+el.libraryDecadeFilter.addEventListener("change", () => renderLibraryRows(getSongPoolPreviewSongs() || []));
+el.libraryCountryFilter?.addEventListener("change", () => renderLibraryRows(getSongPoolPreviewSongs() || []));
+el.libraryGenreFilter?.addEventListener("change", () => renderLibraryRows(getSongPoolPreviewSongs() || []));
 el.hitsterCardsMode.addEventListener("change", () => {
   syncHitsterCardsAvailability();
   state.hitsterCardsEnabled = canUseHitsterCards() && el.hitsterCardsMode.checked;
