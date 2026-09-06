@@ -71,8 +71,16 @@ const songPools = {
     playlistIds: ["107", "108", "109", "110"],
   },
   movies: {
-    title: "Movies & TV Soundtracks",
-    description: "Film- og TV-soundtracks. Når Hitster-kort er slået til, gives bonus for korrekt film eller serie.",
+    title: "Iconic Movie Songs",
+    description: "Kendte filmsange, hvor point med Hitster-kort handler om at gætte filmen eller serien. Fokus er sange som man faktisk kan genkende, ikke anonym baggrundsmusik.",
+    source: "static",
+    libraryName: "MOVIE_SONG_LIBRARY",
+    minSongs: 100,
+    soundtrackBonus: true,
+  },
+  moviesHardcore: {
+    title: "Hardcore Scores & Soundtracks",
+    description: "Den gamle svære film- og TV-pulje fra Bopster med mere specifikke soundtrack-klip og score-numre.",
     source: "bopster",
     playlistId: "1951",
     minSongs: 300,

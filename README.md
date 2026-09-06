@@ -1,6 +1,6 @@
 # Hitster Local
 
-Lokal musikquiz til Spotify med flere gamemodes og separate sangpuljer. Spil for eksempel Classic, Battle Royale, Timeline Showdown, Push Your Luck, Imposter eller Wavelength DJ med hovedbiblioteket, Guilty Pleasures, Movies & TV Soundtracks, Don Domingo mode og flere.
+Lokal musikquiz til Spotify med flere gamemodes og separate sangpuljer. Spil for eksempel Classic, Battle Royale, Timeline Showdown, Push Your Luck, Imposter eller Wavelength DJ med hovedbiblioteket, Guilty Pleasures, Iconic Movie Songs, Hardcore Scores & Soundtracks, Don Domingo mode og flere.
 
 ## Start her
 
