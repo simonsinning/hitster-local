@@ -548,11 +548,17 @@ h2 {
 
 .shared-timeline-settings,
 .push-luck-settings,
+.speed-round-settings,
+.exact-year-settings,
 .imposter-settings {
   display: grid;
   grid-template-columns: minmax(220px, 1fr) minmax(140px, 180px);
   gap: 12px;
   align-items: end;
+}
+
+.shared-order-toggle {
+  grid-column: 1 / -1;
 }
 
 .wavelength-settings {
@@ -1120,6 +1126,139 @@ code {
 
 .wavelength-panel.active {
   display: grid;
+}
+
+.mode-runtime-panel {
+  display: none;
+  width: 100%;
+}
+
+.mode-runtime-panel.active {
+  display: block;
+}
+
+.speed-clock,
+.exact-year-control {
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-2);
+}
+
+.speed-clock {
+  display: grid;
+  grid-template-columns: minmax(150px, 220px) 1fr;
+  gap: 18px;
+  align-items: center;
+}
+
+.speed-clock > div,
+.exact-year-heading > div {
+  display: grid;
+  gap: 3px;
+}
+
+.speed-clock span,
+.exact-year-heading span,
+.exact-year-heading small,
+.exact-year-scale,
+.empty-history {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.speed-clock strong {
+  color: var(--white);
+  font-size: 24px;
+}
+
+.speed-clock strong b {
+  color: var(--green);
+  font-size: 34px;
+}
+
+.speed-clock progress {
+  width: 100%;
+  height: 14px;
+  accent-color: var(--green);
+}
+
+.speed-clock.urgent {
+  border-color: rgba(255, 17, 17, 0.66);
+}
+
+.speed-clock.urgent strong b {
+  color: var(--red);
+}
+
+.speed-clock.urgent progress {
+  accent-color: var(--red);
+}
+
+.exact-year-control {
+  display: grid;
+  gap: 12px;
+}
+
+.exact-year-heading,
+.exact-year-scale {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 12px;
+}
+
+.exact-year-heading output {
+  color: var(--green);
+  font-size: 38px;
+  line-height: 1;
+  font-weight: 900;
+}
+
+.exact-year-control input[type="range"] {
+  width: 100%;
+  accent-color: var(--green);
+}
+
+.exact-year-control.revealed {
+  border-color: rgba(0, 245, 29, 0.45);
+}
+
+.exact-year-player {
+  min-height: 260px;
+}
+
+.exact-year-history {
+  display: grid;
+  gap: 8px;
+  margin-top: 16px;
+  max-height: 430px;
+  overflow: auto;
+}
+
+.exact-year-history-row {
+  display: grid;
+  grid-template-columns: minmax(120px, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-2);
+}
+
+.exact-year-history-row > div {
+  display: grid;
+  gap: 3px;
+}
+
+.exact-year-history-row span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.exact-year-result {
+  text-align: right;
 }
 
 .wavelength-top {
@@ -1704,14 +1843,24 @@ details textarea {
   .gamemaster-row,
   .filter-columns,
   .wavelength-settings,
+  .shared-timeline-settings,
+  .push-luck-settings,
+  .speed-round-settings,
+  .exact-year-settings,
   .imposter-settings,
   .wavelength-top,
   .wavelength-slider-row,
+  .speed-clock,
+  .exact-year-history-row,
   .imposter-name-grid,
   .players-grid,
   .library-tools,
   .library-row {
     grid-template-columns: 1fr;
+  }
+
+  .exact-year-result {
+    text-align: left;
   }
 
   .top-actions {

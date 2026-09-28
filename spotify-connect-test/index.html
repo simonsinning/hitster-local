@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Hitster Local</title>
-    <link rel="stylesheet" href="styles.css?v=movie-pools-1" />
+    <link rel="stylesheet" href="styles.css?v=hide-wavelength-1" />
   </head>
   <body>
     <div class="app-shell">
@@ -25,7 +25,7 @@
             <p class="eyebrow">Forside</p>
             <h2>Vælg stemningen. Sæt spillerne. Start musikken.</h2>
             <p>
-              Spil klassisk Hitster, Battle Royale, Imposter, Wavelength DJ eller en af de andre varianter.
+              Spil klassisk Hitster, Battle Royale, Imposter eller en af de andre varianter.
               Vælg en mode her, eller gå direkte videre og finjuster spillet i opsætningen.
             </p>
             <div class="welcome-actions">
@@ -81,12 +81,13 @@
               <select id="game-mode">
                 <option value="classic">Classic</option>
                 <option value="generations">Battle of the Generations</option>
-                <option value="wavelength">Wavelength DJ</option>
                 <option value="battleRoyale">Battle Royale</option>
                 <option value="sharedTimeline">Timeline Showdown</option>
                 <option value="pushLuck">Push Your Luck</option>
                 <option value="imposter">Imposter</option>
                 <option value="puzzleRush">Puzzle Rush</option>
+                <option value="speedRound">Speedround</option>
+                <option value="exactYear">Årstalsjagten</option>
               </select>
             </label>
 
@@ -165,6 +166,14 @@
                 <span>
                   <strong>Gamemaster med</strong>
                   <small>Kan åbnes under spillet</small>
+                </span>
+              </label>
+
+              <label class="toggle-row">
+                <input id="random-start-enabled" type="checkbox" />
+                <span>
+                  <strong>Tilfældig startspiller</strong>
+                  <small>Trækker lod om hvem der får første tur</small>
                 </span>
               </label>
             </div>
@@ -273,6 +282,7 @@
             </div>
 
             <div class="wavelength-panel" id="wavelength-panel"></div>
+            <div class="mode-runtime-panel" id="mode-runtime-panel"></div>
           </div>
 
           <div class="players-grid" id="players-grid"></div>
@@ -314,6 +324,6 @@
     <script src="don-domingo-library.js"></script>
     <script src="imposter-library.js"></script>
     <script src="movie-song-library.js"></script>
-    <script src="app.js"></script>
+    <script src="app.js?v=hide-wavelength-1"></script>
   </body>
 </html>

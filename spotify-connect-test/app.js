@@ -8,6 +8,8 @@ const defaultWavelengthWinScore = 30;
 const defaultSharedTimelineWinScore = 10;
 const defaultPushLuckWinScore = 10;
 const defaultImposterCount = 1;
+const defaultSpeedRoundSeconds = 60;
+const defaultExactYearWinScore = 50;
 const defaultHitsterCards = 3;
 const defaultBattleRoyaleLives = 3;
 const savedGameKey = "hitster_active_game";
@@ -29,6 +31,7 @@ const gameModes = {
     title: "Wavelength DJ",
     description: "Alle undtagen gætteren ser et hemmeligt tal og finder selv en sang i Spotify, der passer til kategorien og tallet.",
     noSongPool: true,
+    playable: false,
   },
   battleRoyale: {
     title: "Battle Royale",
@@ -55,6 +58,16 @@ const gameModes = {
     title: "Puzzle Rush",
     description: "Placér så mange sange korrekt som muligt i ét run. Første fejl stopper forsøget, og mode kan spilles alene som træning.",
     puzzleRush: true,
+  },
+  speedRound: {
+    title: "Speedround",
+    description: "Classic med tidspres. Uret starter, når sangen afspilles, og placeringen låses og afsløres automatisk, når tiden løber ud.",
+    speedRound: true,
+  },
+  exactYear: {
+    title: "Årstalsjagten",
+    description: "Placér årstallet så præcist som muligt på en slider. Et præcist gæt giver 10 point, og hvert års afstand koster 1 point.",
+    exactYear: true,
   },
 };
 
@@ -281,6 +294,7 @@ const el = {
   genreExclusions: document.getElementById("genre-exclusions"),
   decadeExclusions: document.getElementById("decade-exclusions"),
   gamemasterEnabled: document.getElementById("gamemaster-enabled"),
+  randomStartEnabled: document.getElementById("random-start-enabled"),
   saveClient: document.getElementById("save-client"),
   login: document.getElementById("login"),
   loadDevices: document.getElementById("load-devices"),
@@ -307,6 +321,7 @@ const el = {
   cancelChallenge: document.getElementById("cancel-challenge"),
   songActions: document.getElementById("song-actions"),
   wavelengthPanel: document.getElementById("wavelength-panel"),
+  modeRuntimePanel: document.getElementById("mode-runtime-panel"),
   songsLeft: document.getElementById("songs-left"),
   libraryTotal: document.getElementById("library-total"),
   libraryStats: document.getElementById("library-stats"),
@@ -322,6 +337,7 @@ const el = {
 };
 
 let toastTimer = 0;
+let speedRoundTimer = 0;
 
 const state = {
   players: [
@@ -339,6 +355,7 @@ const state = {
   hitsterCardsEnabled: false,
   gamemasterEnabled: false,
   gamemasterOpen: false,
+  randomStartEnabled: false,
   excludedGenres: [],
   excludedDecades: [],
   titleCorrect: false,
@@ -351,6 +368,8 @@ const state = {
   battleRoyaleWinnerIndex: null,
   sharedTimelineRound: null,
   sharedTimelineWinScore: defaultSharedTimelineWinScore,
+  sharedTimelineOrderedPlacements: false,
+  sharedTimelineNextStarterIndex: 0,
   sharedTimelineSuddenDeathIndexes: null,
   sharedTimelineWinnerIndex: null,
   pushLuckTurnBank: 0,
@@ -363,6 +382,14 @@ const state = {
   imposterCountSetting: String(defaultImposterCount),
   puzzleRushFinishedIndexes: [],
   puzzleRushComplete: false,
+  speedRoundSeconds: defaultSpeedRoundSeconds,
+  speedRoundDeadline: null,
+  speedRoundTimedOut: false,
+  exactYearGuess: null,
+  exactYearMin: 1950,
+  exactYearMax: currentYear,
+  exactYearWinScore: defaultExactYearWinScore,
+  exactYearWinnerIndex: null,
   setupOpen: false,
   started: false,
 };
@@ -374,6 +401,7 @@ function savePersistent() {
   localStorage.setItem("hitster_player_count", el.playerCount.value);
   localStorage.setItem("hitster_cards_mode", canUseHitsterCards(el.gameMode.value) && el.hitsterCardsMode.checked ? "1" : "0");
   localStorage.setItem("hitster_gamemaster_enabled", el.gamemasterEnabled.checked ? "1" : "0");
+  localStorage.setItem("hitster_random_start_enabled", el.randomStartEnabled.checked ? "1" : "0");
   localStorage.setItem("hitster_advanced_enabled", el.advancedSettingsToggle.checked ? "1" : "0");
   localStorage.setItem("hitster_player_names", JSON.stringify(getPlayerNameInputs().map((input) => input.value.trim())));
   localStorage.setItem("hitster_player_settings", JSON.stringify(getSetupPlayerSettings()));
@@ -382,9 +410,12 @@ function savePersistent() {
   localStorage.setItem("hitster_wavelength_use_categories", getWavelengthUseCategoriesSetting() ? "1" : "0");
   localStorage.setItem("hitster_wavelength_win_score", String(getWavelengthWinScoreSetting()));
   localStorage.setItem("hitster_shared_timeline_win_score", String(getSharedTimelineWinScoreSetting()));
+  localStorage.setItem("hitster_shared_timeline_ordered", getSharedTimelineOrderedSetting() ? "1" : "0");
   localStorage.setItem("hitster_push_luck_risk_cards", getPushLuckRiskCardsSetting() ? "1" : "0");
   localStorage.setItem("hitster_push_luck_win_score", String(getPushLuckWinScoreSetting()));
   localStorage.setItem("hitster_imposter_count", String(getImposterCountSetting()));
+  localStorage.setItem("hitster_speed_round_seconds", String(getSpeedRoundSecondsSetting()));
+  localStorage.setItem("hitster_exact_year_win_score", String(getExactYearWinScoreSetting()));
 }
 
 function loadPersistent() {
@@ -402,6 +433,7 @@ function loadPersistent() {
   syncSongPoolAvailability();
   syncHitsterCardsAvailability();
   el.gamemasterEnabled.checked = localStorage.getItem("hitster_gamemaster_enabled") === "1";
+  el.randomStartEnabled.checked = localStorage.getItem("hitster_random_start_enabled") === "1";
   el.advancedSettingsToggle.checked = localStorage.getItem("hitster_advanced_enabled") === "1";
   el.advancedPanel.classList.toggle("active", el.advancedSettingsToggle.checked);
   state.excludedGenres = safeJsonParse(localStorage.getItem("hitster_excluded_genres"), []).map(String);
@@ -410,9 +442,13 @@ function loadPersistent() {
   state.wavelengthUseCategories = getWavelengthUseCategoriesSetting();
   state.wavelengthWinScore = getWavelengthWinScoreSetting();
   state.sharedTimelineWinScore = getSharedTimelineWinScoreSetting();
+  state.sharedTimelineOrderedPlacements = getSharedTimelineOrderedSetting();
+  state.randomStartEnabled = el.randomStartEnabled.checked;
   state.pushLuckRiskCards = getPushLuckRiskCardsSetting();
   state.pushLuckWinScore = getPushLuckWinScoreSetting();
   state.imposterCountSetting = getImposterCountSetting();
+  state.speedRoundSeconds = getSpeedRoundSecondsSetting();
+  state.exactYearWinScore = getExactYearWinScoreSetting();
   renderFilterOptions();
   renderPlayerNameFields(savedCount, savedNames);
   renderModePanel();
@@ -451,6 +487,7 @@ function saveGameSnapshot() {
     hitsterCardsEnabled: state.hitsterCardsEnabled,
     gamemasterEnabled: state.gamemasterEnabled,
     gamemasterOpen: state.gamemasterOpen,
+    randomStartEnabled: state.randomStartEnabled,
     excludedGenres: state.excludedGenres,
     excludedDecades: state.excludedDecades,
     titleCorrect: state.titleCorrect,
@@ -463,6 +500,8 @@ function saveGameSnapshot() {
     battleRoyaleWinnerIndex: state.battleRoyaleWinnerIndex,
     sharedTimelineRound: state.sharedTimelineRound,
     sharedTimelineWinScore: state.sharedTimelineWinScore,
+    sharedTimelineOrderedPlacements: state.sharedTimelineOrderedPlacements,
+    sharedTimelineNextStarterIndex: state.sharedTimelineNextStarterIndex,
     sharedTimelineSuddenDeathIndexes: state.sharedTimelineSuddenDeathIndexes,
     sharedTimelineWinnerIndex: state.sharedTimelineWinnerIndex,
     pushLuckTurnBank: state.pushLuckTurnBank,
@@ -475,6 +514,14 @@ function saveGameSnapshot() {
     imposterCountSetting: state.imposterCountSetting,
     puzzleRushFinishedIndexes: state.puzzleRushFinishedIndexes,
     puzzleRushComplete: state.puzzleRushComplete,
+    speedRoundSeconds: state.speedRoundSeconds,
+    speedRoundDeadline: state.speedRoundDeadline,
+    speedRoundTimedOut: state.speedRoundTimedOut,
+    exactYearGuess: state.exactYearGuess,
+    exactYearMin: state.exactYearMin,
+    exactYearMax: state.exactYearMax,
+    exactYearWinScore: state.exactYearWinScore,
+    exactYearWinnerIndex: state.exactYearWinnerIndex,
     started: state.started,
   };
   localStorage.setItem(savedGameKey, JSON.stringify(snapshot));
@@ -502,10 +549,12 @@ function restoreSavedGame() {
       sharedTimelineScore: Math.max(0, Number(player?.sharedTimelineScore) || 0),
       pushLuckScore: Math.max(0, Number(player?.pushLuckScore) || 0),
       puzzleRushScore: Math.max(0, Number(player?.puzzleRushScore) || 0),
+      exactYearScore: Math.max(0, Number(player?.exactYearScore) || 0),
+      exactYearHistory: normalizeExactYearHistory(player?.exactYearHistory),
     }))
     .slice(0, 12);
 
-  if (players.length < 2) return false;
+  if (players.length < 1) return false;
 
   state.players = players;
   state.currentPlayer = Math.min(Math.max(0, Number(snapshot.currentPlayer) || 0), players.length - 1);
@@ -532,6 +581,7 @@ function restoreSavedGame() {
   }
   state.gamemasterEnabled = Boolean(snapshot.gamemasterEnabled);
   state.gamemasterOpen = Boolean(snapshot.gamemasterOpen);
+  state.randomStartEnabled = Boolean(snapshot.randomStartEnabled);
   state.excludedGenres = Array.isArray(snapshot.excludedGenres) ? snapshot.excludedGenres.map(String) : state.excludedGenres;
   state.excludedDecades = Array.isArray(snapshot.excludedDecades) ? snapshot.excludedDecades.map(String) : state.excludedDecades;
   state.titleCorrect = Boolean(snapshot.titleCorrect);
@@ -544,6 +594,14 @@ function restoreSavedGame() {
   state.battleRoyaleWinnerIndex = Number.isInteger(snapshot.battleRoyaleWinnerIndex) ? snapshot.battleRoyaleWinnerIndex : null;
   state.sharedTimelineRound = normalizeSharedTimelineRound(snapshot.sharedTimelineRound);
   state.sharedTimelineWinScore = clampSharedTimelineWinScore(snapshot.sharedTimelineWinScore);
+  state.sharedTimelineOrderedPlacements = Boolean(snapshot.sharedTimelineOrderedPlacements);
+  state.sharedTimelineNextStarterIndex = Math.min(players.length - 1, Math.max(0, Number(snapshot.sharedTimelineNextStarterIndex) || 0));
+  if (state.sharedTimelineOrderedPlacements && state.sharedTimelineRound?.phase === "placing" && !Number.isInteger(state.sharedTimelineRound.placerIndex)) {
+    state.sharedTimelineRound.placerIndex = getSharedTimelineStarterIndex(
+      getSharedTimelineActiveIndexes().filter((index) => !Number.isInteger(state.sharedTimelineRound.placements[index])),
+      state.sharedTimelineRound.starterIndex ?? state.sharedTimelineNextStarterIndex
+    );
+  }
   state.sharedTimelineSuddenDeathIndexes = normalizeIndexList(snapshot.sharedTimelineSuddenDeathIndexes);
   state.sharedTimelineWinnerIndex = Number.isInteger(snapshot.sharedTimelineWinnerIndex) ? snapshot.sharedTimelineWinnerIndex : null;
   state.pushLuckTurnBank = Math.max(0, Number(snapshot.pushLuckTurnBank) || 0);
@@ -556,6 +614,16 @@ function restoreSavedGame() {
   state.imposterCountSetting = normalizeImposterCountSetting(snapshot.imposterCountSetting, players.length);
   state.puzzleRushFinishedIndexes = normalizeIndexList(snapshot.puzzleRushFinishedIndexes) || [];
   state.puzzleRushComplete = Boolean(snapshot.puzzleRushComplete);
+  state.speedRoundSeconds = clampSpeedRoundSeconds(snapshot.speedRoundSeconds);
+  state.speedRoundDeadline = Number.isFinite(Number(snapshot.speedRoundDeadline)) ? Number(snapshot.speedRoundDeadline) : null;
+  state.speedRoundTimedOut = Boolean(snapshot.speedRoundTimedOut);
+  state.exactYearMin = clampExactYearBoundary(snapshot.exactYearMin, 1900);
+  state.exactYearMax = Math.max(state.exactYearMin, clampExactYearBoundary(snapshot.exactYearMax, currentYear));
+  state.exactYearGuess = clampExactYearGuess(snapshot.exactYearGuess);
+  state.exactYearWinScore = clampExactYearWinScore(snapshot.exactYearWinScore);
+  state.exactYearWinnerIndex = Number.isInteger(snapshot.exactYearWinnerIndex) && players[snapshot.exactYearWinnerIndex]
+    ? snapshot.exactYearWinnerIndex
+    : null;
   state.setupOpen = false;
   state.started = true;
   if (!state.currentSong && !isImposterMode() && !state.puzzleRushComplete) drawNextMystery();
@@ -567,10 +635,12 @@ function restoreSavedGame() {
   syncSongPoolAvailability();
   syncHitsterCardsAvailability();
   el.gamemasterEnabled.checked = state.gamemasterEnabled;
+  el.randomStartEnabled.checked = state.randomStartEnabled;
   renderFilterOptions();
   renderPlayerNameFields(players.length, players.map((player) => player.name));
   renderModePanel();
   renderGamemasterControls();
+  syncSpeedRoundTimer();
   return true;
 }
 
@@ -670,6 +740,8 @@ function createPlayer(name, settings = {}) {
     sharedTimelineScore: Math.max(0, Number(settings.sharedTimelineScore) || 0),
     pushLuckScore: Math.max(0, Number(settings.pushLuckScore) || 0),
     puzzleRushScore: Math.max(0, Number(settings.puzzleRushScore) || 0),
+    exactYearScore: Math.max(0, Number(settings.exactYearScore) || 0),
+    exactYearHistory: [],
   };
 }
 
@@ -698,7 +770,7 @@ function normalizePlayerSettings(settings = {}) {
 }
 
 function normalizeGameMode(value) {
-  if (gameModes[value]) return value;
+  if (gameModes[value] && gameModes[value].playable !== false) return value;
   if (legacyModeToSongPool[value]) return "classic";
   return "classic";
 }
@@ -756,6 +828,47 @@ function clampPushLuckWinScore(value) {
   return Math.min(999, Math.max(1, Math.round(Number(value) || defaultPushLuckWinScore)));
 }
 
+function clampSpeedRoundSeconds(value) {
+  return Math.min(300, Math.max(10, Math.round(Number(value) || defaultSpeedRoundSeconds)));
+}
+
+function clampExactYearWinScore(value) {
+  return Math.min(9999, Math.max(1, Math.round(Number(value) || defaultExactYearWinScore)));
+}
+
+function getExactYearWinScoreSetting() {
+  const input = el.generationGrid?.querySelector("#exact-year-win-score");
+  if (input instanceof HTMLInputElement) return clampExactYearWinScore(input.value);
+  return clampExactYearWinScore(localStorage.getItem("hitster_exact_year_win_score"));
+}
+
+function getSpeedRoundSecondsSetting() {
+  const input = el.generationGrid?.querySelector("#speed-round-seconds");
+  if (input instanceof HTMLInputElement) return clampSpeedRoundSeconds(input.value);
+  return clampSpeedRoundSeconds(localStorage.getItem("hitster_speed_round_seconds"));
+}
+
+function clampExactYearBoundary(value, fallback) {
+  const year = Math.round(Number(value));
+  return Number.isInteger(year) ? Math.min(currentYear + 1, Math.max(1900, year)) : fallback;
+}
+
+function clampExactYearGuess(value) {
+  const fallback = Math.round((state.exactYearMin + state.exactYearMax) / 2);
+  return Math.min(state.exactYearMax, Math.max(state.exactYearMin, Math.round(Number(value) || fallback)));
+}
+
+function normalizeExactYearHistory(value) {
+  if (!Array.isArray(value)) return [];
+  return value.map((entry) => {
+    const song = normalizeSong(entry?.song);
+    if (!song) return null;
+    const guess = clampExactYearBoundary(entry?.guess, song.year);
+    const distance = Math.abs(song.year - guess);
+    return { song, guess, distance, points: Math.max(0, 10 - distance) };
+  }).filter(Boolean).slice(-100);
+}
+
 function clampBattleRoyaleLives(value) {
   return Math.min(99, Math.max(0, Math.round(Number(value) || 0)));
 }
@@ -776,6 +889,12 @@ function getSharedTimelineWinScoreSetting() {
   const input = el.generationGrid?.querySelector("#shared-timeline-win-score");
   if (input instanceof HTMLInputElement) return clampSharedTimelineWinScore(input.value);
   return clampSharedTimelineWinScore(localStorage.getItem("hitster_shared_timeline_win_score"));
+}
+
+function getSharedTimelineOrderedSetting() {
+  const input = el.generationGrid?.querySelector("#shared-timeline-ordered");
+  if (input instanceof HTMLInputElement) return input.checked;
+  return localStorage.getItem("hitster_shared_timeline_ordered") === "1";
 }
 
 function getPushLuckWinScoreSetting() {
@@ -825,6 +944,7 @@ function getPlayerScore(player) {
     return Math.max(0, baseScore + clampScoreOffset(player.scoreOffset));
   }
   if (isPuzzleRushMode()) return Math.max(0, (Number(player.puzzleRushScore) || 0) + clampScoreOffset(player.scoreOffset));
+  if (isExactYearMode()) return Math.max(0, (Number(player.exactYearScore) || 0) + clampScoreOffset(player.scoreOffset));
   return Math.max(0, player.timeline.length + clampScoreOffset(player.scoreOffset));
 }
 
@@ -857,6 +977,7 @@ function getPlayerWinScore(player) {
   if (isWavelengthMode()) return clampWavelengthWinScore(state.wavelengthWinScore);
   if (isSharedTimelineMode()) return clampSharedTimelineWinScore(state.sharedTimelineWinScore);
   if (isPushLuckMode()) return clampPushLuckWinScore(state.pushLuckWinScore);
+  if (isExactYearMode()) return clampExactYearWinScore(state.exactYearWinScore);
   return clampWinScore(player.winScore);
 }
 
@@ -958,6 +1079,7 @@ function renderModePanel(settings = getSetupPlayerSettings()) {
 
   if (mode.sharedTimeline) {
     const winScore = getSharedTimelineWinScoreSetting();
+    const orderedPlacements = getSharedTimelineOrderedSetting();
     el.generationGrid.innerHTML = `
       <div class="mode-rule-card shared-timeline-settings">
         <div>
@@ -967,6 +1089,13 @@ function renderModePanel(settings = getSetupPlayerSettings()) {
         <label>
           <span>Point for sejr</span>
           <input id="shared-timeline-win-score" type="number" min="1" max="999" value="${winScore}" />
+        </label>
+        <label class="toggle-row shared-order-toggle">
+          <input id="shared-timeline-ordered" type="checkbox"${orderedPlacements ? " checked" : ""} />
+          <span>
+            <strong>Skiftende placeringsrækkefølge</strong>
+            <small>Én placerer ad gangen, og en ny spiller starter hver runde</small>
+          </span>
         </label>
       </div>
     `;
@@ -1028,6 +1157,40 @@ function renderModePanel(settings = getSetupPlayerSettings()) {
       <div class="mode-rule-card">
         <strong>Puzzle Rush-regel</strong>
         <p>Placér så mange sange korrekt som muligt i samme run. Hver korrekt placering giver 1 point og en ny sang med det samme. Første fejl stopper run'et. Kan spilles alene som øvelse.</p>
+      </div>
+    `;
+    return;
+  }
+
+  if (mode.speedRound) {
+    const seconds = getSpeedRoundSecondsSetting();
+    el.generationGrid.innerHTML = `
+      <div class="mode-rule-card speed-round-settings">
+        <div>
+          <strong>Speedround-regel</strong>
+          <p>Tiden starter, når Afspil trykkes. Når tiden løber ud, afsløres den valgte placering automatisk. Er intet valgt, tæller runden som forkert.</p>
+        </div>
+        <label>
+          <span>Sekunder pr. sang</span>
+          <input id="speed-round-seconds" type="number" min="10" max="300" step="5" value="${seconds}" />
+        </label>
+      </div>
+    `;
+    return;
+  }
+
+  if (mode.exactYear) {
+    const winScore = getExactYearWinScoreSetting();
+    el.generationGrid.innerHTML = `
+      <div class="mode-rule-card exact-year-settings">
+        <div>
+          <strong>Årstalsjagten-regel</strong>
+          <p>Vælg et præcist år på slideren. Facit giver 10 point, 1 år fra giver 9 point, og sådan fortsætter det ned til 0 point ved 10 år eller mere. Første spiller til pointmålet vinder.</p>
+        </div>
+        <label>
+          <span>Point for sejr</span>
+          <input id="exact-year-win-score" type="number" min="1" max="9999" value="${winScore}" />
+        </label>
       </div>
     `;
     return;
@@ -1108,8 +1271,16 @@ function isPuzzleRushMode(value = state.gameMode) {
   return value === "puzzleRush";
 }
 
+function isSpeedRoundMode(value = state.gameMode) {
+  return value === "speedRound";
+}
+
+function isExactYearMode(value = state.gameMode) {
+  return value === "exactYear";
+}
+
 function canUseHitsterCards(value = el.gameMode?.value || state.gameMode) {
-  return !isBattleRoyaleMode(value) && !isSharedTimelineMode(value) && !isPushLuckMode(value) && !isImposterMode(value) && !isPuzzleRushMode(value);
+  return !isBattleRoyaleMode(value) && !isSharedTimelineMode(value) && !isPushLuckMode(value) && !isImposterMode(value) && !isPuzzleRushMode(value) && !isExactYearMode(value);
 }
 
 function syncHitsterCardsAvailability() {
@@ -1393,10 +1564,14 @@ function bustPushLuckTurn() {
 }
 
 function createSharedTimelineRound() {
+  const activeIndexes = getSharedTimelineActiveIndexes();
+  const starterIndex = getSharedTimelineStarterIndex(activeIndexes, state.sharedTimelineNextStarterIndex);
   return {
     placements: {},
     results: [],
     phase: "placing",
+    starterIndex,
+    placerIndex: state.sharedTimelineOrderedPlacements ? starterIndex : null,
   };
 }
 
@@ -1413,6 +1588,8 @@ function normalizeSharedTimelineRound(value) {
     placements,
     results: Array.isArray(value.results) ? value.results : [],
     phase: value.phase === "results" ? "results" : "placing",
+    starterIndex: Number.isInteger(value.starterIndex) && state.players[value.starterIndex] ? value.starterIndex : null,
+    placerIndex: Number.isInteger(value.placerIndex) && state.players[value.placerIndex] ? value.placerIndex : null,
   };
 }
 
@@ -1430,6 +1607,27 @@ function getSharedTimelineActiveIndexes() {
 
 function isSharedTimelinePlayerActive(index) {
   return getSharedTimelineActiveIndexes().includes(index);
+}
+
+function getSharedTimelineStarterIndex(activeIndexes, preferredIndex) {
+  if (!activeIndexes.length) return null;
+  if (activeIndexes.includes(preferredIndex)) return preferredIndex;
+  return activeIndexes.find((index) => index > preferredIndex) ?? activeIndexes[0];
+}
+
+function getNextSharedTimelineIndex(currentIndex, activeIndexes = getSharedTimelineActiveIndexes(), placements = null) {
+  if (!activeIndexes.length) return null;
+  const currentPosition = activeIndexes.indexOf(currentIndex);
+  for (let offset = 1; offset <= activeIndexes.length; offset++) {
+    const index = activeIndexes[(Math.max(-1, currentPosition) + offset) % activeIndexes.length];
+    if (!placements || !Number.isInteger(placements[index])) return index;
+  }
+  return null;
+}
+
+function canSharedTimelinePlayerPlace(index) {
+  if (!state.sharedTimelineOrderedPlacements) return isSharedTimelinePlayerActive(index);
+  return state.sharedTimelineRound?.placerIndex === index;
 }
 
 function isSharedTimelinePlacementCorrect(playerIndex, placementIndex) {
@@ -1590,11 +1788,11 @@ function syncGenreGroupStates() {
   });
 }
 
-function toast(message) {
+function toast(message, duration = 3600) {
   clearTimeout(toastTimer);
   el.toast.textContent = message;
   el.toast.classList.add("show");
-  toastTimer = setTimeout(() => el.toast.classList.remove("show"), 3600);
+  toastTimer = setTimeout(() => el.toast.classList.remove("show"), duration);
 }
 
 async function copyRedirectUri() {
@@ -1869,20 +2067,24 @@ function tokenOverlapScore(expected, actual, maxScore) {
 }
 
 async function playCurrentTrack() {
+  let timerStarted = false;
   try {
     ensureGameReady();
     const deviceId = el.deviceSelect.value;
     if (!deviceId) throw new Error("Vælg afspilningsenhed først.");
 
+    timerStarted = startSpeedRoundTimer();
+
     const uri = await resolveTrack(state.currentSong);
     await playSpotifyUri(deviceId, uri);
     toast("Afspiller skjult.");
   } catch (error) {
+    if (timerStarted) stopSpeedRoundTimer({ reset: true });
     if (shouldSkipPlaybackError(error)) {
       skipUnplayableCurrentSong(error.message);
       return;
     }
-    toast(error.message);
+    toast(error.message, 12000);
   }
 }
 
@@ -1896,7 +2098,7 @@ async function playImposterTrack() {
     await playSpotifyUri(deviceId, uri);
     toast("Afspiller for crewmate.");
   } catch (error) {
-    toast(error.message);
+    toast(error.message, 12000);
   }
 }
 
@@ -1939,17 +2141,31 @@ async function playSpotifyUri(deviceId, uri) {
     await delay(650);
     await spotifyFetch(path, options);
   }
+
+  await verifySpotifyPlayback(deviceId, uri);
+}
+
+async function verifySpotifyPlayback(deviceId, uri) {
+  // An accepted command does not guarantee that the device started the song.
+  for (const waitMs of [500, 1000, 2000]) {
+    await delay(waitMs);
+    let playback;
+    try {
+      playback = await spotifyFetch("/me/player", { signal: AbortSignal.timeout(5000) });
+    } catch {
+      throw new Error("Startkommandoen er sendt, men Spotify-status kunne ikke kontrolleres. Tjek om sangen spiller, og prøv Hent enheder igen.");
+    }
+    const matchesTrack = playback?.item?.uri === uri || playback?.item?.linked_from?.uri === uri;
+    if (playback?.device?.id === deviceId && playback.is_playing && matchesTrack) return;
+  }
+
+  throw new Error("Spotify accepterede startkommandoen, men bekræftede ikke sangens afspilning. Prøv Spotify Web Player: Åbn open.spotify.com på computeren, start en sang dér, og vælg Web Player via Hent enheder i Hitster. Lad Spotify-fanen være åben.");
 }
 
 function shouldSkipPlaybackError(error) {
   const message = String(error.message || "");
-  return (
-    message.startsWith("Kunne ikke finde") ||
-    message.startsWith("404:") ||
-    message.startsWith("502:") ||
-    message.startsWith("503:") ||
-    message.startsWith("504:")
-  );
+  // Missing devices and temporary Spotify/network errors do not make a song unplayable.
+  return message.startsWith("Kunne ikke finde");
 }
 
 function isRetryableSpotifyError(error) {
@@ -1959,6 +2175,67 @@ function isRetryableSpotifyError(error) {
 
 function delay(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function startSpeedRoundTimer() {
+  if (!isSpeedRoundMode() || !state.started || state.revealed || state.speedRoundDeadline) return false;
+  state.speedRoundTimedOut = false;
+  state.speedRoundDeadline = Date.now() + state.speedRoundSeconds * 1000;
+  renderModeRuntimePanel();
+  syncSpeedRoundTimer();
+  updateSpeedRoundClock();
+  saveGameSnapshot();
+  return true;
+}
+
+function stopSpeedRoundTimer({ reset = false } = {}) {
+  if (speedRoundTimer) window.clearInterval(speedRoundTimer);
+  speedRoundTimer = 0;
+  state.speedRoundDeadline = null;
+  if (reset) state.speedRoundTimedOut = false;
+  renderModeRuntimePanel();
+}
+
+function syncSpeedRoundTimer() {
+  if (speedRoundTimer) window.clearInterval(speedRoundTimer);
+  speedRoundTimer = 0;
+  if (!isSpeedRoundMode() || !state.started || state.revealed || !state.speedRoundDeadline) return;
+  if (state.speedRoundDeadline <= Date.now()) {
+    expireSpeedRound();
+    return;
+  }
+  speedRoundTimer = window.setInterval(updateSpeedRoundClock, 200);
+}
+
+function updateSpeedRoundClock() {
+  if (!isSpeedRoundMode()) return;
+  if (state.speedRoundDeadline && state.speedRoundDeadline <= Date.now()) {
+    expireSpeedRound();
+    return;
+  }
+  const value = el.modeRuntimePanel?.querySelector("[data-speed-time]");
+  const progress = el.modeRuntimePanel?.querySelector("[data-speed-progress]");
+  if (!value || !progress) return;
+  const remainingMs = state.speedRoundDeadline
+    ? Math.max(0, state.speedRoundDeadline - Date.now())
+    : state.revealed ? 0 : state.speedRoundSeconds * 1000;
+  value.textContent = state.speedRoundTimedOut ? "0" : String(Math.ceil(remainingMs / 1000));
+  progress.max = state.speedRoundSeconds;
+  progress.value = remainingMs / 1000;
+  progress.closest(".speed-clock")?.classList.toggle("urgent", remainingMs > 0 && remainingMs <= 10000);
+}
+
+function expireSpeedRound() {
+  if (!isSpeedRoundMode() || !state.started || state.revealed) return;
+  if (speedRoundTimer) window.clearInterval(speedRoundTimer);
+  speedRoundTimer = 0;
+  state.speedRoundDeadline = null;
+  state.speedRoundTimedOut = true;
+  state.challenges = state.challenges.filter((challenge) => challenge.placementIndex !== null);
+  state.activeChallengeIndex = null;
+  state.revealed = true;
+  render();
+  toast(state.pendingIndex === null ? "Tiden er gået. Ingen placering blev valgt." : "Tiden er gået. Placeringen er låst og afsløret.");
 }
 
 function skipUnplayableCurrentSong(message) {
@@ -2019,6 +2296,7 @@ async function startGame() {
   state.battleRoyaleWinnerIndex = null;
   state.sharedTimelineRound = null;
   state.sharedTimelineWinScore = getSharedTimelineWinScoreSetting();
+  state.sharedTimelineOrderedPlacements = getSharedTimelineOrderedSetting();
   state.sharedTimelineSuddenDeathIndexes = null;
   state.sharedTimelineWinnerIndex = null;
   state.pushLuckTurnBank = 0;
@@ -2031,10 +2309,21 @@ async function startGame() {
   state.imposterCountSetting = getImposterCountSetting();
   state.puzzleRushFinishedIndexes = [];
   state.puzzleRushComplete = false;
+  state.speedRoundSeconds = getSpeedRoundSecondsSetting();
+  state.speedRoundDeadline = null;
+  state.speedRoundTimedOut = false;
+  stopSpeedRoundTimer({ reset: true });
+  state.exactYearGuess = null;
+  state.exactYearMin = 1950;
+  state.exactYearMax = currentYear;
+  state.exactYearWinScore = getExactYearWinScoreSetting();
+  state.exactYearWinnerIndex = null;
+  state.randomStartEnabled = el.randomStartEnabled.checked;
   state.excludedGenres = advancedEnabled ? getCheckedValues(el.genreExclusions) : [];
   state.excludedDecades = advancedEnabled ? getCheckedValues(el.decadeExclusions) : [];
   state.players = names.map((name, index) => createPlayer(name, settings[index]));
-  state.currentPlayer = 0;
+  state.currentPlayer = state.randomStartEnabled ? Math.floor(Math.random() * state.players.length) : 0;
+  state.sharedTimelineNextStarterIndex = state.currentPlayer;
   state.pendingIndex = null;
   state.challenges = [];
   state.activeChallengeIndex = null;
@@ -2050,7 +2339,7 @@ async function startGame() {
     state.wavelength = createWavelengthRound();
     state.setupOpen = false;
     render();
-    toast("Wavelength DJ er startet.");
+    toast(`Wavelength DJ er startet.${state.randomStartEnabled ? ` ${state.players[state.currentPlayer].name} er første gætter.` : ""}`);
     return;
   }
 
@@ -2084,14 +2373,19 @@ async function startGame() {
     return;
   }
 
-  const minimumSongs = isSharedTimelineMode(state.gameMode) ? 2 : state.players.length + 1;
+  const minimumSongs = isExactYearMode(state.gameMode) ? 1 : isSharedTimelineMode(state.gameMode) ? 2 : state.players.length + 1;
   if (state.deck.length < minimumSongs) {
     state.started = false;
     toast(`${getSongPoolTitle()} efterlader for få sange til ${getGameModeTitle()}.`);
     return;
   }
 
-  if (isSharedTimelineMode(state.gameMode)) {
+  if (isExactYearMode(state.gameMode)) {
+    const years = state.deck.map((song) => song.year).filter(Number.isInteger);
+    state.exactYearMin = years.length ? Math.min(...years) : 1950;
+    state.exactYearMax = years.length ? Math.max(...years) : currentYear;
+    state.exactYearGuess = Math.round((state.exactYearMin + state.exactYearMax) / 2);
+  } else if (isSharedTimelineMode(state.gameMode)) {
     const starter = drawAnySong();
     if (starter) state.players.forEach((player) => player.timeline.push({ ...starter }));
   } else {
@@ -2102,7 +2396,7 @@ async function startGame() {
     }
   }
 
-  if (state.players.some((player) => !player.timeline.length)) {
+  if (!isExactYearMode(state.gameMode) && state.players.some((player) => !player.timeline.length)) {
     state.started = false;
     toast("Der mangler sange i en af de valgte generationer.");
     return;
@@ -2117,7 +2411,12 @@ async function startGame() {
 
   state.setupOpen = false;
   render();
-  toast(`${getGameModeTitle()} er startet med ${getSongPoolTitle()}.`);
+  const starterText = isSharedTimelineMode() && state.sharedTimelineOrderedPlacements
+    ? ` ${state.players[state.sharedTimelineRound?.starterIndex]?.name || "En spiller"} starter med at placere.`
+    : state.randomStartEnabled && !isSharedTimelineMode()
+    ? ` ${state.players[state.currentPlayer].name} starter.`
+    : "";
+  toast(`${getGameModeTitle()} er startet med ${getSongPoolTitle()}.${starterText}`);
 }
 
 function resetGame() {
@@ -2138,6 +2437,8 @@ function resetGame() {
   state.battleRoyaleWinnerIndex = null;
   state.sharedTimelineRound = null;
   state.sharedTimelineWinScore = getSharedTimelineWinScoreSetting();
+  state.sharedTimelineOrderedPlacements = getSharedTimelineOrderedSetting();
+  state.sharedTimelineNextStarterIndex = 0;
   state.sharedTimelineSuddenDeathIndexes = null;
   state.sharedTimelineWinnerIndex = null;
   state.pushLuckTurnBank = 0;
@@ -2150,6 +2451,16 @@ function resetGame() {
   state.imposterCountSetting = getImposterCountSetting();
   state.puzzleRushFinishedIndexes = [];
   state.puzzleRushComplete = false;
+  state.speedRoundSeconds = getSpeedRoundSecondsSetting();
+  state.speedRoundDeadline = null;
+  state.speedRoundTimedOut = false;
+  stopSpeedRoundTimer({ reset: true });
+  state.exactYearGuess = null;
+  state.exactYearMin = 1950;
+  state.exactYearMax = currentYear;
+  state.exactYearWinScore = getExactYearWinScoreSetting();
+  state.exactYearWinnerIndex = null;
+  state.randomStartEnabled = el.randomStartEnabled.checked;
   state.excludedGenres = el.advancedSettingsToggle.checked ? getCheckedValues(el.genreExclusions) : [];
   state.excludedDecades = el.advancedSettingsToggle.checked ? getCheckedValues(el.decadeExclusions) : [];
   state.titleCorrect = false;
@@ -2197,6 +2508,10 @@ function drawNextMystery() {
   state.titleCorrect = false;
   state.artistCorrect = false;
   state.revealed = false;
+  state.speedRoundDeadline = null;
+  state.speedRoundTimedOut = false;
+  stopSpeedRoundTimer();
+  if (isExactYearMode()) state.exactYearGuess = Math.round((state.exactYearMin + state.exactYearMax) / 2);
   if (!state.currentSong) toast("Sangpuljen er tom.");
 }
 
@@ -2221,7 +2536,19 @@ function choosePlacement(index) {
 function chooseSharedTimelinePlacement(playerIndex, placementIndex) {
   if (!state.sharedTimelineRound || state.sharedTimelineRound.phase === "results") return;
   if (!isSharedTimelinePlayerActive(playerIndex)) return;
+  if (state.sharedTimelineOrderedPlacements && state.sharedTimelineRound.placerIndex !== playerIndex) {
+    const placer = state.players[state.sharedTimelineRound.placerIndex];
+    toast(`${placer?.name || "En anden spiller"} skal placere nu.`);
+    return;
+  }
   state.sharedTimelineRound.placements[playerIndex] = placementIndex;
+  if (state.sharedTimelineOrderedPlacements) {
+    state.sharedTimelineRound.placerIndex = getNextSharedTimelineIndex(
+      playerIndex,
+      getSharedTimelineActiveIndexes(),
+      state.sharedTimelineRound.placements
+    );
+  }
   render();
 }
 
@@ -2280,6 +2607,10 @@ function chooseChallengePlacement(index) {
 
 function revealTrack() {
   ensureGameReady();
+  if (isExactYearMode()) {
+    revealExactYearRound();
+    return;
+  }
   if (isSharedTimelineMode()) {
     revealSharedTimelineRound();
     return;
@@ -2295,10 +2626,50 @@ function revealTrack() {
   }
 
   state.revealed = true;
+  stopSpeedRoundTimer();
   render();
 }
 
+function revealExactYearRound() {
+  if (!isExactYearMode() || state.revealed || state.exactYearWinnerIndex !== null || !state.currentSong) return;
+  const player = state.players[state.currentPlayer];
+  const guess = clampExactYearGuess(state.exactYearGuess);
+  const distance = Math.abs(state.currentSong.year - guess);
+  const points = Math.max(0, 10 - distance);
+  player.exactYearScore = Math.max(0, (Number(player.exactYearScore) || 0) + points);
+  player.exactYearHistory.push({ song: { ...state.currentSong }, guess, distance, points });
+  state.exactYearGuess = guess;
+  state.revealed = true;
+  state.exactYearWinnerIndex = getExactYearWinnerIndex();
+  render();
+  if (state.exactYearWinnerIndex !== null) {
+    toast(`${player.name} vinder Årstalsjagten med ${getPlayerScore(player)} point!`);
+    return;
+  }
+  toast(`${guess} var ${distance ? `${distance} år fra` : "præcist"}. ${points} point til ${player.name}.`);
+}
+
+function finishExactYearRound() {
+  if (!isExactYearMode() || !state.revealed || state.exactYearWinnerIndex !== null) return;
+  state.currentPlayer = (state.currentPlayer + 1) % state.players.length;
+  drawNextMystery();
+  render();
+}
+
+function getExactYearWinnerIndex() {
+  const target = clampExactYearWinScore(state.exactYearWinScore);
+  const leaders = state.players
+    .map((player, index) => ({ index, score: getPlayerScore(player) }))
+    .filter((entry) => entry.score >= target)
+    .sort((a, b) => b.score - a.score || a.index - b.index);
+  return leaders[0]?.index ?? null;
+}
+
 function keepCard() {
+  if (isExactYearMode()) {
+    finishExactYearRound();
+    return;
+  }
   if (isSharedTimelineMode()) {
     finishSharedTimelineRound();
     return;
@@ -2388,6 +2759,12 @@ function revealSharedTimelineRound() {
 
 function finishSharedTimelineRound() {
   if (!state.sharedTimelineRound || state.sharedTimelineRound.phase !== "results" || state.sharedTimelineWinnerIndex !== null) return;
+  if (state.sharedTimelineOrderedPlacements) {
+    state.sharedTimelineNextStarterIndex = getNextSharedTimelineIndex(
+      state.sharedTimelineRound.starterIndex,
+      getSharedTimelineActiveIndexes()
+    ) ?? 0;
+  }
   drawNextMystery();
   render();
 }
@@ -2596,7 +2973,7 @@ function renderAppStage() {
 
 function renderWelcomeModes() {
   if (!el.welcomeModeGrid) return;
-  const featuredModes = ["classic", "battleRoyale", "sharedTimeline", "pushLuck", "imposter", "wavelength"];
+  const featuredModes = ["classic", "speedRound", "exactYear", "battleRoyale", "sharedTimeline", "pushLuck", "imposter"];
   el.welcomeModeGrid.innerHTML = featuredModes.map((key) => {
     const mode = gameModes[key];
     const active = el.gameMode?.value === key;
@@ -2617,6 +2994,7 @@ function render() {
   renderControls();
   renderGamemasterControls();
   renderWavelengthPanel();
+  renderModeRuntimePanel();
   renderLibrary();
   if (el.songsLeft) el.songsLeft.textContent = isWavelengthMode() ? "0" : String(state.deck.length);
   saveGameSnapshot();
@@ -2631,6 +3009,10 @@ function renderPlayers() {
     renderImposterPlayers();
     return;
   }
+  if (isExactYearMode()) {
+    renderExactYearPlayers();
+    return;
+  }
 
   el.playersGrid.innerHTML = "";
   state.players.forEach((player, index) => {
@@ -2638,11 +3020,16 @@ function renderPlayers() {
     const eliminated = isBattleRoyaleMode() && !isBattleRoyalePlayerAlive(player);
     const rushFinished = isPuzzleRushMode() && isPuzzleRushPlayerFinished(index);
     const sharedActive = isSharedTimelineMode() && state.started && isSharedTimelinePlayerActive(index);
-    panel.className = `player-panel${state.started && !state.puzzleRushComplete && (state.currentPlayer === index || sharedActive) ? " active" : ""}${eliminated || rushFinished ? " eliminated" : ""}`;
+    const sharedPlacing = sharedActive && state.sharedTimelineOrderedPlacements && canSharedTimelinePlayerPlace(index);
+    const sharedPlaced = sharedActive && state.sharedTimelineOrderedPlacements && Number.isInteger(state.sharedTimelineRound?.placements[index]) && state.sharedTimelineRound?.phase === "placing";
+    const panelActive = isSharedTimelineMode()
+      ? (state.sharedTimelineOrderedPlacements ? sharedPlacing : sharedActive)
+      : state.currentPlayer === index;
+    panel.className = `player-panel${state.started && !state.puzzleRushComplete && panelActive ? " active" : ""}${eliminated || rushFinished ? " eliminated" : ""}`;
     panel.innerHTML = `
       <div class="player-header">
         <div>
-          <p class="eyebrow">${state.sharedTimelineWinnerIndex === index ? "Vinder" : state.battleRoyaleWinnerIndex === index ? "Vinder" : rushFinished ? "Run slut" : eliminated ? "Elimineret" : sharedActive && state.sharedTimelineSuddenDeathIndexes ? "Sudden death" : isPuzzleRushMode() && state.started && state.currentPlayer === index ? "Rush" : `Spiller ${index + 1}`}</p>
+          <p class="eyebrow">${state.sharedTimelineWinnerIndex === index ? "Vinder" : state.battleRoyaleWinnerIndex === index ? "Vinder" : rushFinished ? "Run slut" : eliminated ? "Elimineret" : sharedPlacing ? "Placerer nu" : sharedPlaced ? "Placering låst" : sharedActive && state.sharedTimelineSuddenDeathIndexes ? "Sudden death" : isPuzzleRushMode() && state.started && state.currentPlayer === index ? "Rush" : `Spiller ${index + 1}`}</p>
           <h2>${escapeHtml(player.name)}</h2>
           ${isBattleMode() ? `<p class="player-era">${escapeHtml(getGenerationEraLabel(player.generationEra))}</p>` : ""}
         </div>
@@ -2668,10 +3055,10 @@ function renderPlayers() {
         const round = state.sharedTimelineRound;
         const placement = round ? Number(round.placements[index]) : null;
         const result = getSharedTimelineResult(index);
-        if (state.started && sharedActive && round?.phase === "placing") {
+        if (state.started && sharedActive && round?.phase === "placing" && canSharedTimelinePlayerPlace(index)) {
           timeline.append(createSlotButton(slotIndex, index));
         }
-        if (state.started && sharedActive && round?.phase === "placing" && placement === slotIndex) {
+        if (state.started && sharedActive && round?.phase === "placing" && !state.sharedTimelineOrderedPlacements && placement === slotIndex) {
           timeline.append(createSharedTimelinePendingCard(index));
         }
         if (result && !result.correct && result.placementIndex === slotIndex) {
@@ -2706,6 +3093,8 @@ function renderPlayers() {
       ? `${state.players[state.sharedTimelineWinnerIndex].name} vinder`
       : state.started && state.sharedTimelineSuddenDeathIndexes?.length
       ? "Sudden death"
+      : state.started && state.sharedTimelineOrderedPlacements && Number.isInteger(state.sharedTimelineRound?.placerIndex)
+      ? `${state.players[state.sharedTimelineRound.placerIndex].name} placerer`
       : state.started
       ? "Alle placerer"
       : "Start spillet";
@@ -2718,6 +3107,44 @@ function renderPlayers() {
       ? state.players[state.currentPlayer].name
       : "Start spillet";
   }
+}
+
+function renderExactYearPlayers() {
+  el.playersGrid.innerHTML = "";
+  state.players.forEach((player, index) => {
+    const panel = document.createElement("section");
+    const history = Array.isArray(player.exactYearHistory) ? player.exactYearHistory : [];
+    panel.className = `player-panel exact-year-player${state.started && (state.currentPlayer === index || state.exactYearWinnerIndex === index) ? " active" : ""}`;
+    panel.innerHTML = `
+      <div class="player-header">
+        <div>
+          <p class="eyebrow">${state.exactYearWinnerIndex === index ? "Vinder" : state.started && state.currentPlayer === index ? "Gætter nu" : `Spiller ${index + 1}`}</p>
+          <h2>${escapeHtml(player.name)}</h2>
+        </div>
+        <div class="player-meta"><strong>${getPlayerScore(player)}/${getPlayerWinScore(player)} point</strong></div>
+      </div>
+      <div class="exact-year-history">
+        ${history.length ? history.slice().reverse().map((entry) => `
+          <article class="exact-year-history-row">
+            <div>
+              <strong>${escapeHtml(entry.song.title)}</strong>
+              <span>${escapeHtml(entry.song.artist)}</span>
+            </div>
+            <div class="exact-year-result">
+              <strong>${entry.guess} → ${entry.song.year}</strong>
+              <span>${entry.distance === 0 ? "Præcist" : `${entry.distance} år fra`} · +${entry.points}</span>
+            </div>
+          </article>
+        `).join("") : `<p class="empty-history">Ingen sange spillet endnu.</p>`}
+      </div>
+    `;
+    el.playersGrid.append(panel);
+  });
+  el.currentPlayer.textContent = state.exactYearWinnerIndex !== null
+    ? `${state.players[state.exactYearWinnerIndex].name} vinder`
+    : state.started && state.players[state.currentPlayer]
+    ? state.players[state.currentPlayer].name
+    : "Start spillet";
 }
 
 function renderImposterPlayers() {
@@ -2777,6 +3204,10 @@ function renderTurnStatus() {
     renderWavelengthTurnStatus();
     return;
   }
+  if (isExactYearMode()) {
+    renderExactYearTurnStatus();
+    return;
+  }
 
   if (isSharedTimelineMode()) {
     renderSharedTimelineTurnStatus();
@@ -2833,6 +3264,33 @@ function renderTurnStatus() {
   } else {
     el.turnStatus.textContent = state.pendingIndex === null ? "Tryk på et plus i tidslinjen." : "Placering valgt. Klar til afsløring.";
   }
+}
+
+function renderExactYearTurnStatus() {
+  if (!state.started) {
+    el.turnStatus.textContent = "Start Årstalsjagten.";
+    return;
+  }
+  if (!state.currentSong) {
+    el.turnStatus.textContent = "Sangpuljen er tom. Sammenlign spillernes samlede point.";
+    return;
+  }
+  if (state.exactYearWinnerIndex !== null) {
+    const winner = state.players[state.exactYearWinnerIndex];
+    el.turnStatus.textContent = `${winner.name} vinder Årstalsjagten med ${getPlayerScore(winner)}/${getPlayerWinScore(winner)} point.`;
+    return;
+  }
+  const player = state.players[state.currentPlayer];
+  if (!state.revealed) {
+    el.turnStatus.textContent = `${player.name} vælger et præcist udgivelsesår på slideren.`;
+    return;
+  }
+  const result = player.exactYearHistory[player.exactYearHistory.length - 1];
+  if (!result) {
+    el.turnStatus.textContent = `${state.currentSong.title} - ${state.currentSong.artist} - ${state.currentSong.year}.`;
+    return;
+  }
+  el.turnStatus.textContent = `${state.currentSong.title} - ${state.currentSong.artist} udkom i ${state.currentSong.year}. Gæt: ${result.guess}. ${result.points} point.`;
 }
 
 function renderPuzzleRushTurnStatus() {
@@ -2904,6 +3362,12 @@ function renderSharedTimelineTurnStatus() {
   }
 
   const missing = getSharedTimelineActiveIndexes().filter((index) => !Number.isInteger(state.sharedTimelineRound.placements[index]));
+  if (state.sharedTimelineOrderedPlacements && Number.isInteger(state.sharedTimelineRound.placerIndex)) {
+    const placer = state.players[state.sharedTimelineRound.placerIndex];
+    const starter = state.players[state.sharedTimelineRound.starterIndex];
+    el.turnStatus.textContent = `${placer.name} placerer nu.${starter ? ` ${starter.name} startede runden.` : ""}`;
+    return;
+  }
   el.turnStatus.textContent = missing.length
     ? `${missing.map((index) => state.players[index].name).join(", ")} mangler at placere sangen.`
     : "Alle har placeret. Klar til afsløring.";
@@ -2983,6 +3447,10 @@ function renderControls() {
 
   const hasSong = state.started && Boolean(state.currentSong);
   el.songActions.classList.remove("hidden");
+  if (isExactYearMode()) {
+    renderExactYearControls(hasSong);
+    return;
+  }
   if (isPushLuckMode()) {
     renderPushLuckControls(hasSong);
     return;
@@ -3036,6 +3504,62 @@ function renderControls() {
   el.titleCorrect.classList.toggle("active", state.titleCorrect);
   el.artistCorrect.classList.toggle("active", !soundtrackBonus && state.artistCorrect);
   renderChallengeControls(hasSong);
+}
+
+function renderExactYearControls(hasSong) {
+  const showGamemaster = state.started && state.gamemasterEnabled;
+  const gameOver = state.exactYearWinnerIndex !== null;
+  el.gamemasterToggle.classList.toggle("hidden", !showGamemaster);
+  el.gamemasterToggle.classList.toggle("active", showGamemaster && state.gamemasterOpen);
+  el.gamemasterToggle.setAttribute("aria-pressed", showGamemaster && state.gamemasterOpen ? "true" : "false");
+  el.gamemasterPanel.classList.toggle("active", showGamemaster && state.gamemasterOpen);
+  el.playTrack.disabled = !hasSong || state.revealed || gameOver;
+  el.resumeTrack.disabled = !hasSong || state.revealed || gameOver;
+  el.pauseTrack.disabled = !hasSong;
+  el.revealTrack.disabled = !hasSong || state.revealed || gameOver;
+  setActionLabel(el.keepCard, "Næste sang");
+  el.keepCard.title = "Næste sang";
+  el.keepCard.setAttribute("aria-label", "Næste sang");
+  el.keepCard.disabled = !state.revealed || gameOver;
+  setActionLabel(el.discardCard, "Afventer");
+  el.discardCard.disabled = true;
+  el.bonusActions.classList.remove("active");
+  el.challengePanel.classList.remove("active");
+}
+
+function renderModeRuntimePanel() {
+  if (!el.modeRuntimePanel) return;
+  el.modeRuntimePanel.classList.toggle("active", isSpeedRoundMode() || isExactYearMode());
+  if (isSpeedRoundMode()) {
+    const remaining = state.speedRoundDeadline
+      ? Math.max(0, Math.ceil((state.speedRoundDeadline - Date.now()) / 1000))
+      : state.revealed ? 0 : state.speedRoundSeconds;
+    const label = state.speedRoundTimedOut ? "Tiden er gået" : state.revealed ? "Afsløret" : state.speedRoundDeadline ? "Tid tilbage" : "Klar ved Afspil";
+    el.modeRuntimePanel.innerHTML = `
+      <div class="speed-clock${remaining <= 10 && state.speedRoundDeadline ? " urgent" : ""}">
+        <div><span>${label}</span><strong><b data-speed-time>${remaining}</b> sek.</strong></div>
+        <progress data-speed-progress max="${state.speedRoundSeconds}" value="${Math.min(state.speedRoundSeconds, remaining)}"></progress>
+      </div>
+    `;
+    updateSpeedRoundClock();
+    return;
+  }
+  if (isExactYearMode()) {
+    const guess = clampExactYearGuess(state.exactYearGuess);
+    const gameOver = state.exactYearWinnerIndex !== null;
+    el.modeRuntimePanel.innerHTML = `
+      <div class="exact-year-control${state.revealed || gameOver ? " revealed" : ""}">
+        <div class="exact-year-heading">
+          <div><span>Dit gæt</span><strong><output id="exact-year-output">${guess}</output></strong></div>
+          <small>${state.exactYearMin} til ${state.exactYearMax} · Først til ${state.exactYearWinScore} point</small>
+        </div>
+        <input id="exact-year-slider" type="range" min="${state.exactYearMin}" max="${state.exactYearMax}" step="1" value="${guess}"${state.revealed || gameOver ? " disabled" : ""} aria-label="Gæt udgivelsesår" />
+        <div class="exact-year-scale"><span>${state.exactYearMin}</span><span>${state.exactYearMax}</span></div>
+      </div>
+    `;
+    return;
+  }
+  el.modeRuntimePanel.innerHTML = "";
 }
 
 function renderPuzzleRushControls(hasSong) {
@@ -3321,6 +3845,10 @@ function renderGamemasterControls() {
     renderPuzzleRushGamemasterControls();
     return;
   }
+  if (isExactYearMode()) {
+    renderExactYearGamemasterControls();
+    return;
+  }
   el.gamemasterGrid.innerHTML = state.players.map((player, index) => `
     <article class="gamemaster-row" data-gm-player="${index}">
       <div>
@@ -3341,6 +3869,59 @@ function renderGamemasterControls() {
       </label>
     </article>
   `).join("");
+}
+
+function renderExactYearGamemasterControls() {
+  el.gamemasterGrid.innerHTML = `
+    <article class="gamemaster-row shared-timeline-gamemaster-round">
+      <div>
+        <h3>Spil</h3>
+        <p>Ret pointmålet undervejs</p>
+      </div>
+      <label>
+        <span>Pointmål</span>
+        <input data-exact-year-gm-setting="winScore" type="number" min="1" max="9999" value="${state.exactYearWinScore}" />
+      </label>
+    </article>
+    ${state.players.map((player, index) => `
+      <article class="gamemaster-row shared-timeline-gamemaster-player" data-gm-player="${index}">
+        <div>
+          <h3>${escapeHtml(player.name)}</h3>
+          <p>${player.exactYearHistory.length} gæt · ${getPlayerScore(player)}/${getPlayerWinScore(player)} point</p>
+        </div>
+        <label>
+          <span>Point</span>
+          <input data-exact-year-gm-setting="score" type="number" min="0" max="9999" value="${getPlayerScore(player)}" />
+        </label>
+      </article>
+    `).join("")}
+  `;
+}
+
+function handleExactYearGamemasterInput(input) {
+  const setting = input.dataset.exactYearGmSetting;
+  if (setting === "winScore") {
+    state.exactYearWinScore = clampExactYearWinScore(input.value);
+    state.exactYearWinnerIndex = getExactYearWinnerIndex();
+    renderPlayers();
+    renderTurnStatus();
+    renderControls();
+    renderModeRuntimePanel();
+    saveGameSnapshot();
+    return;
+  }
+  if (setting !== "score") return;
+  const row = input.closest("[data-gm-player]");
+  const player = row ? state.players[Number(row.dataset.gmPlayer)] : null;
+  if (!player) return;
+  player.exactYearScore = Math.max(0, Math.min(9999, Math.round(Number(input.value) || 0)));
+  player.scoreOffset = 0;
+  state.exactYearWinnerIndex = getExactYearWinnerIndex();
+  renderPlayers();
+  renderTurnStatus();
+  renderControls();
+  renderModeRuntimePanel();
+  saveGameSnapshot();
 }
 
 function renderPuzzleRushGamemasterControls() {
@@ -3757,7 +4338,7 @@ function createSlotButton(index, playerIndex = state.currentPlayer) {
   button.className = "slot-button";
   if (isSharedTimelineMode()) {
     const placement = state.sharedTimelineRound?.placements[playerIndex];
-    button.disabled = state.sharedTimelineRound?.phase === "results";
+    button.disabled = state.sharedTimelineRound?.phase === "results" || !canSharedTimelinePlayerPlace(playerIndex);
     button.classList.toggle("selected", placement === index);
   } else {
     button.disabled = state.revealed || (state.challenges.length > 0 && state.activeChallengeIndex === null);
@@ -4266,11 +4847,20 @@ el.wavelengthPanel.addEventListener("click", (event) => {
   if (target.id === "wavelength-finish-round") finishWavelengthRound();
   if (target.id === "wavelength-next-round") startNextWavelengthRound();
 });
+el.modeRuntimePanel?.addEventListener("input", (event) => {
+  const input = event.target;
+  if (!(input instanceof HTMLInputElement) || input.id !== "exact-year-slider" || state.revealed || state.exactYearWinnerIndex !== null) return;
+  state.exactYearGuess = clampExactYearGuess(input.value);
+  const output = el.modeRuntimePanel.querySelector("#exact-year-output");
+  if (output) output.textContent = String(state.exactYearGuess);
+  saveGameSnapshot();
+});
 el.advancedSettingsToggle.addEventListener("change", () => {
   el.advancedPanel.classList.toggle("active", el.advancedSettingsToggle.checked);
   savePersistent();
 });
 el.gamemasterEnabled.addEventListener("change", savePersistent);
+el.randomStartEnabled.addEventListener("change", savePersistent);
 el.advancedPlayerGrid.addEventListener("input", (event) => {
   const target = event.target;
   if (!(target instanceof HTMLInputElement)) return;
@@ -4323,6 +4913,10 @@ el.gamemasterGrid.addEventListener("input", (event) => {
   }
   if (isPuzzleRushMode()) {
     handlePuzzleRushGamemasterInput(input);
+    return;
+  }
+  if (isExactYearMode()) {
+    handleExactYearGamemasterInput(input);
     return;
   }
   const row = input.closest("[data-gm-player]");
