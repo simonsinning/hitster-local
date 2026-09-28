@@ -1797,6 +1797,43 @@ details textarea {
   font-size: 12px;
 }
 
+.site-footer {
+  display: grid;
+  grid-template-columns: auto minmax(260px, 1fr) auto;
+  gap: 18px;
+  align-items: center;
+  margin-top: 34px;
+  padding: 18px 2px 0;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.site-footer > div {
+  display: grid;
+  gap: 2px;
+}
+
+.site-footer strong {
+  color: var(--white);
+  font-size: 13px;
+}
+
+.site-footer p {
+  margin: 0;
+}
+
+.site-footer a {
+  color: var(--green);
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.site-footer a:hover {
+  text-decoration: underline;
+}
+
 .toast {
   position: fixed;
   right: 18px;
@@ -1857,6 +1894,11 @@ details textarea {
   .library-tools,
   .library-row {
     grid-template-columns: 1fr;
+  }
+
+  .site-footer {
+    grid-template-columns: 1fr;
+    gap: 10px;
   }
 
   .exact-year-result {
